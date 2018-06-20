@@ -1,0 +1,102 @@
+open Printf;
+open Config_file;
+open Web;
+
+/* All preserved configuration-related information */
+let group = new group;
+let _ip = (new string_cp)(
+  ~group,
+  ["host_info", "ip"],
+  "127.0.0.1",
+  "Server ip address or host name");
+let _user = (new string_cp)(
+  ~group,
+  ["host_info", "user"],
+  "user",
+  "User name (or none if no login is required)");
+let _password = (new string_cp)(
+  ~group,
+  ["host_info", "password"],
+  "password",
+  "Password (or none if no login is required)");
+let _start_at = (new option_cp)(
+  string_wrappers,
+  ~group,
+  ["run_info", "start_at"],
+  Some("2018-06-05T21:29:01.797Z/362.029445011"),
+  "Only start test when matching this record timestamp/duration");
+let _stop_at = (new option_cp)(
+  string_wrappers,
+  ~group, ["run_info", "stop_at"],
+  None,
+  "Stop testing when matching this record timestamp/duration.");
+let _pause = (new float_cp)(
+  ~group,
+  ["run_info", "pause"],
+  0.5,
+  "Pause for this duration (in seconds) between steps.");
+let _timeouts = (new float_cp)(
+  ~group,
+  ["run_info", "timeouts"],
+  5.0,
+  "Each step can take up to this time (in seconds) before timeing out.");
+let _diff_command = (new option_cp)(
+  string_wrappers,
+  ~group,
+  ["run_info", "diff_command"],
+  Some("diff -y"),
+  "System command to execute to generate diff bits.");
+/* */
+
+let write_default_config_file = () => {
+  group#write("config/default.cfg");
+};
+
+let read_config_file = (dir_path) => {
+  group#read(
+    ~on_type_error=
+      (groupable_cp, raw_cp, output, filename, in_channel) =>
+        {
+          CfrIO.notify(
+            sprintf(
+              "Type error while loading configuration parameter %s from file %s.\n%!",
+              String.concat(".", groupable_cp#get_name),
+              filename
+            )
+          );
+        },
+    sprintf("%s/default.cfg", dir_path));
+};
+
+let read_ignore_list = (dir_path, name) =>
+  List.fold_left((accu, item) =>
+    StringSet.add(item, accu),
+    StringSet.empty,
+    Str.split(Str.regexp("\n"), CfrIO.read_file(sprintf("%s/ignored.%s", dir_path, name)))
+  );
+
+let read_info = (dir_path) => {
+  let ignore_endpoints = read_ignore_list(dir_path, "endpoints");
+  let ignore_attributes = read_ignore_list(dir_path, "attributes");
+
+  read_config_file(dir_path);
+
+  (
+    {
+      ip: _ip#get,
+      user: _user#get,
+      password: _password#get
+    },
+    {
+      start_at: _start_at#get,
+      stop_at: _stop_at#get,
+      pause: _pause#get,
+      timeouts: _timeouts#get,
+      diff_command: _diff_command#get
+    },
+    {
+      ignore_endpoints: ignore_endpoints,
+      ignore_attributes: ignore_attributes
+    }
+  )
+};
