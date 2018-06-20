@@ -75,40 +75,44 @@ let get_token_from_headers = headers => {
 
 let get_json = file_name => Yojson.Basic.from_file(file_name);
 
-let perform_login = host_info => {
-  let login_uri = Uri.of_string("https://" ++ host_info.ip ++ "/api/login");
-  let referer_url = "https://" ++ host_info.ip ++ "/api/login.html";
-  let main_t = () =>
-    Client.post(
-      ~ctx,
-      ~headers =
-        Header.of_list([
-          ("Content-Type", "application/json"),
-          ("Referer", referer_url)
-        ]),
-      ~body =
-        `Assoc([
-          ("userName", `String(host_info.user)),
-          ("password", `String(host_info.password))
-        ])
-        |> Yojson.Basic.pretty_to_string
-        |> Cohttp_lwt.Body.of_string,
-      login_uri
-    )
-    >>= (
-      ((resp, body)) => {
-        let code = resp |> Response.status |> Code.code_of_status;
-        let headers = resp |> Response.headers |> Header.to_string;
-        let token = get_token_from_headers(headers);
-        body |> Cohttp_lwt.Body.to_string >|= (body => (
-          switch(code) {
-          | 200 => Success(body)
-          | code_ => Failure(code_, body)
-          }
-          , token));
-      }
-    );
-  Lwt_main.run(main_t());
+let perform_login = (no_login, host_info) => {
+  switch(no_login) {
+  | true => (Success("No Login"), Some(""))
+  | false =>
+    let login_uri = Uri.of_string("https://" ++ host_info.ip ++ "/api/login");
+    let referer_url = "https://" ++ host_info.ip ++ "/api/login.html";
+    let main_t = () =>
+      Client.post(
+        ~ctx,
+        ~headers =
+          Header.of_list([
+            ("Content-Type", "application/json"),
+            ("Referer", referer_url)
+          ]),
+        ~body =
+          `Assoc([
+            ("userName", `String(host_info.user)),
+            ("password", `String(host_info.password))
+          ])
+          |> Yojson.Basic.pretty_to_string
+          |> Cohttp_lwt.Body.of_string,
+        login_uri
+      )
+      >>= (
+        ((resp, body)) => {
+          let code = resp |> Response.status |> Code.code_of_status;
+          let headers = resp |> Response.headers |> Header.to_string;
+          let token = get_token_from_headers(headers);
+          body |> Cohttp_lwt.Body.to_string >|= (body => (
+            switch(code) {
+            | 200 => Success(body)
+            | code_ => Failure(code_, body)
+            }
+            , token));
+        }
+      );
+    Lwt_main.run(main_t());
+  }
 };
 
 let execute_get = (url, query_string, context) => {

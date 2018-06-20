@@ -7,6 +7,7 @@ open CfrIO;
 type cmdlineargs =
   | Source_file(string)
   | Config_dir(string)
+  | NoLogin
   | Csv;
 
 let should_ignore_response = (context, url, mime_type) =>
@@ -159,10 +160,10 @@ let rec traverse_actions = (list_of_actions, context) => {
   ();
 };
 
-let execute_actions = (json, host_info, run_info, config_info, use_csv) =>
+let execute_actions = (json, host_info, run_info, config_info, use_csv, no_login) =>
   Yojson.Basic.Util.(
     Web.(
-      switch (perform_login(host_info)) {
+      switch (perform_login(no_login, host_info)) {
       | (Success(response), Some(token)) =>
         let will_be_executing =
           switch run_info.start_at {
@@ -222,7 +223,8 @@ let display_help = () => {
   notify("    options:");
   notify("        --csv: output csv data rather than plain text");
   notify("         -source <file_name>: specify alternate .har file");
-  notify("         -config <dir_name>: specify alternate config directory\n");
+  notify("         -config <dir_name>: specify alternate config directory");
+  notify("         -nologin: does not attempt log in to service\n");
   notify("modified:\n    show which lines were changed from the reference capture\n");
   notify("timestamp <startedDateTime> <time>:\n    return a timestamp for 'start_at'/'stop_at' configuration\n");
   notify("reset:\n    re-create default configuration file\n");
@@ -242,6 +244,7 @@ let rec process_args = (args, ret) => {
   | [head, ...tail] =>
     switch(head) {
     | "--csv" => ArgSet.add(Csv, process_args(tail, ret))
+    | "--nologin" => ArgSet.add(NoLogin, process_args(tail, ret))
     | "--source" =>
       switch(tail) {
       | [] => raise(MissingArgument("--source"))
@@ -270,12 +273,14 @@ let () = {
         Array.to_list(Array.sub(arguments, 2, Array.length(arguments) - 2)),
         ArgSet.empty);
       let arg_use_csv = ref(false);
+      let arg_no_login = ref(false);
       let arg_source_file = ref("example.har");
       let arg_dir_path = ref("config");
       ArgSet.iter(
         k => {
           switch(k) {
           | Csv => arg_use_csv := true
+          | NoLogin => arg_no_login := true
           | Source_file(file_name) => arg_source_file := file_name
           | Config_dir(dir_path) => arg_dir_path := dir_path
           }
@@ -288,7 +293,8 @@ let () = {
         host_info,
         run_info,
         config_info,
-        arg_use_csv^
+        arg_use_csv^,
+        arg_no_login^
       );
       cleanup();
     | false => ()
