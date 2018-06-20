@@ -29,9 +29,15 @@ let dump_diff = (url) => {
   );
 };
 
-let report = (context, url, code, response) => {
+let report = (context, url, methd, code, response) => {
   switch(context.Web.use_csv) {
-  | true => ()
+  | true =>
+    switch(code) {
+    | 200 => notify(sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, ""))
+    | 0 => notify(sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, response))
+    | code_ when code_< 1 => notify(sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, response))
+    | code_ => notify(sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, ""))
+    }
   | false =>
     switch(code) {
     | 200 => notify(response)
@@ -42,17 +48,17 @@ let report = (context, url, code, response) => {
   };
 };
 
-let process_response = (context, url, mime_type, reference_text, text) => {
+let process_response = (context, url, methd, mime_type, reference_text, text) => {
   if (should_ignore_response(context, url, mime_type)) {
-    report(context, url, 0, "Ignoring");
+    report(context, url, methd, 0, "Ignoring");
   }
   else {
     switch(Entities.compare_responses(context, reference_text, text)) {
     | false =>
         dump_diff(url);
-        report(context, url, -1, "Different response than expected");
+        report(context, url, methd, -1, "Different response than expected");
     | true =>
-        report(context, url, 200, "OK");
+        report(context, url, methd, 200, "OK");
     }
   };
 };
@@ -77,8 +83,8 @@ let execute_action = (action, context) => {
     if (! context.Web.use_csv) notify_begin(sprintf("Querying: %s ... ", url));
     Web.(
       switch (execute_get(url, query_string, context)) {
-      | Success(response) => process_response(context, url, mime_type, text, response)
-      | Failure(code, response) => report(context, url, code, response)
+      | Success(response) => process_response(context, url, "get", mime_type, text, response)
+      | Failure(code, response) => report(context, url, "get", code, response)
       }
     );
   | "POST" =>
@@ -86,8 +92,8 @@ let execute_action = (action, context) => {
     if (! context.Web.use_csv) notify_begin(sprintf("Posting to: %s ... ", url));
     Web.(
       switch (execute_post(url, post_data, context)) {
-      | Success(response) => process_response(context, url, mime_type, text, response)
-      | Failure(code, response) => report(context, url, code, response)
+      | Success(response) => process_response(context, url, "post", mime_type, text, response)
+      | Failure(code, response) => report(context, url, "post", code, response)
       }
     );
   | "PUT" =>
@@ -95,8 +101,8 @@ let execute_action = (action, context) => {
     if (! context.Web.use_csv) notify_begin(sprintf("Putting to: %s ... ", url));
     Web.(
       switch (execute_put(url, post_data, context)) {
-      | Success(response) => process_response(context, url, mime_type, text, response)
-      | Failure(code, response) => report(context, url, code, response)
+      | Success(response) => process_response(context, url, "put", mime_type, text, response)
+      | Failure(code, response) => report(context, url, "put", code, response)
       }
     );
   | method_ => notify(sprintf("Unsupported Method: %s", method_))
