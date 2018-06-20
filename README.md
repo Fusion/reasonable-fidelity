@@ -22,7 +22,33 @@ Attributes/files you do not wish to compare can be added to 'ignore' files.
 - more configurable login
 - cookies, beyond token
 
-## Setup
+## Using
+
+```
+Valid Arguments:
+
+help:
+    display help
+
+run:
+    run tests
+    options:
+        --csv: output csv data rather than plain text
+         -source <file_name>: specify alternate .har file
+         -config <dir_name>: specify alternate config directory
+         -nologin: does not attempt log in to service
+
+modified:
+    show which lines were changed from the reference capture
+
+timestamp <startedDateTime> <time>:
+    return a timestamp for 'start_at'/'stop_at' configuration
+
+reset:
+    re-create default configuration file
+```
+
+## Building
 
 ```bash
 brew install opam
