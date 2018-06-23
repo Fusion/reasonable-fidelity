@@ -2,6 +2,17 @@ open Printf;
 open Lwt;
 open Cohttp;
 open Cohttp_lwt_unix;
+open ExtLib;
+
+module StringSet = Set.Make({
+  type t = string;
+  let compare = Pervasives.compare;
+});
+
+module StringMap = Map.Make({
+  type t = string;
+  let compare = Pervasives.compare;
+});
 
 type execution_status =
   | Executing
@@ -18,6 +29,7 @@ type host_info = {
 };
 
 type run_info = {
+  use_token_not_cookies: bool,
   start_at: option(string),
   stop_at: option(string),
   pause: float,
@@ -26,16 +38,12 @@ type run_info = {
 };
 
 type execution_info = {
+  cookies: StringMap.t(string),
   token: string,
   executing: execution_status
 };
 
 type use_csv = bool;
-
-module StringSet = Set.Make({
-  type t = string;
-  let compare = Pervasives.compare;
-});
 
 type config_info = {
   ignore_endpoints: StringSet.t,
@@ -60,24 +68,57 @@ let build_context = (~config_info, ~host_info, ~run_info, ~execution_info, ~use_
 
 let ctx = WebContext.get_web_context();
 
+let get_json = file_name => Yojson.Basic.from_file(file_name);
+
+/*
+ Generic case: we need to memorize and send cookies back
+ */
+let get_cookies_from_header_string = header_string => {
+  let cookie_matcher = Str.regexp({|set-cookie: \([^;, ]+\)=\([^;, ]*\)|});
+
+  List.fold_left((accu, item) =>
+    switch (Str.search_forward(cookie_matcher, item, 0)) {
+    | exception Not_found => accu
+    | idx => StringMap.add(Str.matched_group(1, item), Str.matched_group(2, item), accu)
+    },
+    StringMap.empty,
+    Str.split(Str.regexp("\n"), header_string)
+  )
+};
+
 /*
  If the application being tested sets a cookie containing a session token,
  we will memorize that token and re use it in future requests.
  */
-let get_token_from_headers = headers => {
+let get_token_from_header_string = header_string => {
   let access_token_matcher =
     Str.regexp({|set-cookie: accessToken=\([a-f0-9\-]+\);.+|});
-  switch (Str.search_forward(access_token_matcher, headers, 0)) {
+  switch (Str.search_forward(access_token_matcher, header_string, 0)) {
   | exception Not_found => None
-  | idx => Some(Str.matched_group(1, headers))
+  | idx => Some(Str.matched_group(1, header_string))
   };
 };
 
-let get_json = file_name => Yojson.Basic.from_file(file_name);
+/*
+ Based on settings, we will now return either a list of cookies
+ as previously retrieved, or a token value
+ */
+let get_client_auth_headers = (context) => {
+  switch(context.run_info.use_token_not_cookies) {
+  | true =>
+    [("Cookie", "accessToken=" ++ context.execution_info.token)]
+  | false =>
+    List.map(binding =>
+      switch(binding) {
+      | (k, v) => ("Cookie", sprintf("%s=%s", k, v))
+      },
+      StringMap.bindings(context.execution_info.cookies))
+  }
+};
 
 let perform_login = (no_login, host_info) => {
   switch(no_login) {
-  | true => (Success("No Login"), Some(""))
+  | true => (Success("No Login"), StringMap.empty, Some(""))
   | false =>
     let login_uri = Uri.of_string("https://" ++ host_info.ip ++ "/api/login");
     let referer_url = "https://" ++ host_info.ip ++ "/api/login.html";
@@ -101,13 +142,15 @@ let perform_login = (no_login, host_info) => {
       >>= (
         ((resp, body)) => {
           let code = resp |> Response.status |> Code.code_of_status;
-          let headers = resp |> Response.headers |> Header.to_string;
-          let token = get_token_from_headers(headers);
+          let header_string = resp |> Response.headers |> Header.to_string;
+          let cookies = get_cookies_from_header_string(header_string);
+          let token = get_token_from_header_string(header_string);
           body |> Cohttp_lwt.Body.to_string >|= (body => (
             switch(code) {
             | 200 => Success(body)
             | code_ => Failure(code_, body)
             }
+            , cookies
             , token));
         }
       );
@@ -144,7 +187,7 @@ let execute_get = (url, query_string, context) => {
       ~headers =
         Header.of_list([
           ("Content-Type", "application/json"),
-          ("Cookie", "accessToken=" ++ context.execution_info.token)
+          ...get_client_auth_headers(context)
         ]),
       Uri.of_string(full_query)
     )
@@ -172,7 +215,7 @@ let execute_post = (url, post_data, context) => {
       ~headers =
         Header.of_list([
           ("Content-Type", "application/json"),
-          ("Cookie", "accessToken=" ++ context.execution_info.token)
+          ...get_client_auth_headers(context)
         ]),
       ~body = post_data |> Cohttp_lwt.Body.of_string,
       Uri.of_string(url)
@@ -201,7 +244,7 @@ let execute_put = (url, post_data, context) => {
       ~headers =
         Header.of_list([
           ("Content-Type", "application/json"),
-          ("Cookie", "accessToken=" ++ context.execution_info.token)
+          ...get_client_auth_headers(context)
         ]),
       ~body = post_data |> Cohttp_lwt.Body.of_string,
       Uri.of_string(url)

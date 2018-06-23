@@ -3,6 +3,7 @@ open Lwt;
 open Cohttp;
 open Cohttp_lwt_unix;
 open CfrIO;
+open ExtLib;
 
 type cmdlineargs =
   | Source_file(string)
@@ -29,6 +30,7 @@ let dump_diff = (url) => {
   );
 };
 
+/* TODO Purify: return string instead then pass it to notify */
 let report = (context, url, methd, code, response) => {
   switch(context.Web.use_csv) {
   | true =>
@@ -69,6 +71,25 @@ let execute_action = (action, context) => {
   let method = request |> member("method") |> to_string;
   let url = request |> member("url") |> to_string;
   /* let request_headers = request |> member("headers"); */
+  let cookies = request |> member("cookies") |> to_list;
+  List.iter(item => {
+    let cookie_name = item |> member("name") |> to_string;
+    let cookie_value = item |> member("value") |> to_string;
+    let cookie_http_only = item |> member("httpOnly") |> to_bool;
+    let cookie_secure = item |> member("secure") |> to_bool;
+    /* TODO Support exp date -- well...does it matter, really? */
+    let cookie_expires = switch(item |> member("expires") |> to_string_option) {
+    | Some(exp_date) => `Session
+    | None => `Session
+    };
+    ignore(Cookie.Set_cookie_hdr.make(
+      ~expiration = cookie_expires,
+      ~secure = cookie_secure,
+      ~http_only = cookie_http_only,
+      (cookie_name, cookie_value)
+    ));
+  }, cookies);
+
   let response = action |> member("response");
   /* let status = response |> member("status") |> to_int; */
   /* let response_headers = response |> member("headers"); */
@@ -129,6 +150,7 @@ let rec traverse_actions = (list_of_actions, context) => {
       traverse_actions(tail, context)
     | (Not_Executing, Some(start_at), _) =>
       let execution_info = {
+        cookies: context.execution_info.cookies,
         token: context.execution_info.token,
         executing: Executing
       };
@@ -144,6 +166,7 @@ let rec traverse_actions = (list_of_actions, context) => {
       traverse_actions(tail, new_context);
     | (Executing, _, Some(stop_at)) when stop_at == ts =>
       let execution_info = {
+        cookies: context.execution_info.cookies,
         token: context.execution_info.token,
         executing: Not_Executing
       };
@@ -163,20 +186,19 @@ let rec traverse_actions = (list_of_actions, context) => {
       raise(Failure("Unsupported state mix while traversing action list."))
     };
   };
-  ();
 };
 
 let execute_actions = (json, host_info, run_info, config_info, use_csv, no_login) =>
   Yojson.Basic.Util.(
     Web.(
       switch (perform_login(no_login, host_info)) {
-      | (Success(response), Some(token)) =>
+      | (Success(response), cookies, Some(token)) =>
         let will_be_executing =
           switch run_info.start_at {
           | Some(start_at) => Not_Executing
           | None => Executing
           };
-        let execution_info = {token, executing: will_be_executing};
+        let execution_info = {cookies, token, executing: will_be_executing};
         traverse_actions(
           json |> member("log") |> member("entries") |> to_list,
           build_context(~config_info, ~host_info, ~run_info, ~execution_info, ~use_csv)

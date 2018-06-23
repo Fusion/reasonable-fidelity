@@ -21,7 +21,6 @@ let write_file = (name, content) => {
   let ch = open_out(name);
   output_string(ch, content);
   close_out(ch);
-  ()
 };
 
 let rename_file = (old_name, new_name) => {

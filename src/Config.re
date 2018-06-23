@@ -19,6 +19,11 @@ let _password = (new string_cp)(
   ["host_info", "password"],
   "password",
   "Password (or none if no login is required)");
+let _use_token_not_cookies = (new bool_cp)(
+  ~group,
+  ["run_info", "use_token_not_cookies"],
+  false,
+  "Set to true for specific cases");
 let _start_at = (new option_cp)(
   string_wrappers,
   ~group,
@@ -88,6 +93,7 @@ let read_info = (dir_path) => {
       password: _password#get
     },
     {
+      use_token_not_cookies: _use_token_not_cookies#get,
       start_at: _start_at#get,
       stop_at: _stop_at#get,
       pause: _pause#get,
