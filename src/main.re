@@ -31,36 +31,36 @@ let dump_diff = (url) => {
 };
 
 /* TODO Purify: return string instead then pass it to notify */
-let report = (context, url, methd, code, response) => {
+let build_report_str = (context, url, methd, code, response) => {
   switch(context.Web.use_csv) {
   | true =>
     switch(code) {
-    | 200 => notify(sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, ""))
-    | 0 => notify(sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, response))
-    | code_ when code_< 1 => notify(sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, response))
-    | code_ => notify(sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, ""))
+    | 200 => sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, "")
+    | 0 => sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, response)
+    | code_ when code_< 1 => sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, response)
+    | code_ => sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, "")
     }
   | false =>
     switch(code) {
-    | 200 => notify(response)
-    | 0 => notify(response)
-    | code_ when code_< 1 => notify(sprintf("Error type: %s", response))
-    | code_ => notify(sprintf("Error code: %d", code))
+    | 200 => response
+    | 0 => response
+    | code_ when code_< 1 => sprintf("Error type: %s", response)
+    | code_ => sprintf("Error code: %d", code)
     }
   };
 };
 
 let process_response = (context, url, methd, mime_type, reference_text, text) => {
   if (should_ignore_response(context, url, mime_type)) {
-    report(context, url, methd, 0, "Ignoring");
+    notify(build_report_str(context, url, methd, 0, "Ignoring"));
   }
   else {
     switch(Entities.compare_responses(context, reference_text, text)) {
     | false =>
         dump_diff(url);
-        report(context, url, methd, -1, "Different response than expected");
+        notify(build_report_str(context, url, methd, -1, "Different response than expected"));
     | true =>
-        report(context, url, methd, 200, "OK");
+        notify(build_report_str(context, url, methd, 200, "OK"));
     }
   };
 };
@@ -105,7 +105,7 @@ let execute_action = (action, context) => {
     Web.(
       switch (execute_get(url, query_string, context)) {
       | Success(response) => process_response(context, url, "get", mime_type, text, response)
-      | Failure(code, response) => report(context, url, "get", code, response)
+      | Failure(code, response) => notify(build_report_str(context, url, "get", code, response))
       }
     );
   | "POST" =>
@@ -114,7 +114,7 @@ let execute_action = (action, context) => {
     Web.(
       switch (execute_post(url, post_data, context)) {
       | Success(response) => process_response(context, url, "post", mime_type, text, response)
-      | Failure(code, response) => report(context, url, "post", code, response)
+      | Failure(code, response) => notify(build_report_str(context, url, "post", code, response))
       }
     );
   | "PUT" =>
@@ -123,7 +123,7 @@ let execute_action = (action, context) => {
     Web.(
       switch (execute_put(url, post_data, context)) {
       | Success(response) => process_response(context, url, "put", mime_type, text, response)
-      | Failure(code, response) => report(context, url, "put", code, response)
+      | Failure(code, response) => notify(build_report_str(context, url, "put", code, response))
       }
     );
   | method_ => notify(sprintf("Unsupported Method: %s", method_))
