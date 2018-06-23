@@ -50,10 +50,22 @@ reset:
 
 ## Building
 
+From scratch, really...
+
+OS X
 ```bash
 brew install opam
 opam init
-opam update && opam switch 4.03.0
+opam update && opam switch 4.05.0
+```
+Linux
+```bash
+sudo apt install m4
+wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin
+```
+Then
+```bash
+opam install reason lwt cohttp cohttp-lwt-unix yojson config-file
 ```
 
 ## Specifics of this code
