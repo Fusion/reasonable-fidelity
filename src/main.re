@@ -11,6 +11,12 @@ type cmdlineargs =
   | NoLogin
   | Csv;
 
+/*
+ * Check whether a server response should not be verified against the
+ * canonical, recorded response.
+ * Return true if the mime-type is one considered unimportant, or if a plugin
+ * instructs us to ignore the response
+ */
 let should_ignore_response = (context, url, mime_type) =>
   Web.(
     switch (StringSet.mem(url, context.config_info.ignore_endpoints), mime_type) {
@@ -20,9 +26,12 @@ let should_ignore_response = (context, url, mime_type) =>
     | (_, "application/x-font-woff") => true
     | (_, "image/png") => true
     | (_, "image/jpg") => true
-    | (_, _) => false
+    | (_, _) => Plugins.if_any(context.plugin_info, "should_ignore_response", [Lymp.Pystr(url), Lymp.Pystr(mime_type)])
     });
 
+/*
+ * The most recent diff output gets an official name
+ */
 let dump_diff = (url) => {
   rename_file(
     "diffs/diffed-left-right.txt",
@@ -30,7 +39,10 @@ let dump_diff = (url) => {
   );
 };
 
-/* TODO Purify: return string instead then pass it to notify */
+/*
+ * Build string to display to report success/failure
+ * following the appropriate format (CSV, full text)
+ */
 let build_report_str = (context, url, methd, code, response) => {
   switch(context.Web.use_csv) {
   | true =>
@@ -41,11 +53,15 @@ let build_report_str = (context, url, methd, code, response) => {
     | code_ => sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, "")
     }
   | false =>
-    switch(code) {
-    | 200 => response
-    | 0 => response
-    | code_ when code_< 1 => sprintf("Error type: %s", response)
-    | code_ => sprintf("Error code: %d", code)
+    switch(Plugins.if_option(context.plugin_info, "build_report_str", [Lymp.Pystr(url), Lymp.Pystr(methd), Lymp.Pyint(code), Lymp.Pystr(response)])) {
+    | Some(plugin_response) => plugin_response
+    | None =>
+      switch(code) {
+      | 200 => response
+      | 0 => response
+      | code_ when code_< 1 => sprintf("Error type: %s", response)
+      | code_ => sprintf("Error code: %d", code)
+      }
     }
   };
 };
@@ -70,32 +86,9 @@ let execute_action = (action, context) => {
   let request = action |> member("request");
   let method = request |> member("method") |> to_string;
   let url = request |> member("url") |> to_string;
-  /* let request_headers = request |> member("headers"); */
-  let cookies = request |> member("cookies") |> to_list;
-  List.iter(item => {
-    let cookie_name = item |> member("name") |> to_string;
-    let cookie_value = item |> member("value") |> to_string;
-    let cookie_http_only = item |> member("httpOnly") |> to_bool;
-    let cookie_secure = item |> member("secure") |> to_bool;
-    /* TODO Support exp date -- well...does it matter, really? */
-    let cookie_expires = switch(item |> member("expires") |> to_string_option) {
-    | Some(exp_date) => `Session
-    | None => `Session
-    };
-    ignore(Cookie.Set_cookie_hdr.make(
-      ~expiration = cookie_expires,
-      ~secure = cookie_secure,
-      ~http_only = cookie_http_only,
-      (cookie_name, cookie_value)
-    ));
-  }, cookies);
 
   let response = action |> member("response");
-  /* let status = response |> member("status") |> to_int; */
-  /* let response_headers = response |> member("headers"); */
-  /* let redirect_url = response |> member("redirect_url"); */
   let content = response |> member("content");
-  /* let size = content |> member("size") |> to_int; */
   let text = content |> member("text") |> to_string;
   let mime_type = content |> member("mimeType") |> to_string;
   switch method {
@@ -157,6 +150,7 @@ let rec traverse_actions = (list_of_actions, context) => {
       let new_context =
         build_context(
           ~config_info=context.config_info,
+          ~plugin_info=context.plugin_info,
           ~host_info=context.host_info,
           ~run_info=context.run_info,
           ~execution_info,
@@ -173,6 +167,7 @@ let rec traverse_actions = (list_of_actions, context) => {
       let new_context =
         build_context(
           ~config_info=context.config_info,
+          ~plugin_info=context.plugin_info,
           ~host_info=context.host_info,
           ~run_info=context.run_info,
           ~execution_info,
@@ -188,7 +183,7 @@ let rec traverse_actions = (list_of_actions, context) => {
   };
 };
 
-let execute_actions = (json, host_info, run_info, config_info, use_csv, no_login) =>
+let execute_actions = (json, host_info, run_info, config_info, plugin_info, use_csv, no_login) =>
   Yojson.Basic.Util.(
     Web.(
       switch (perform_login(no_login, host_info)) {
@@ -201,7 +196,7 @@ let execute_actions = (json, host_info, run_info, config_info, use_csv, no_login
         let execution_info = {cookies, token, executing: will_be_executing};
         traverse_actions(
           json |> member("log") |> member("entries") |> to_list,
-          build_context(~config_info, ~host_info, ~run_info, ~execution_info, ~use_csv)
+          build_context(~config_info, ~plugin_info, ~host_info, ~run_info, ~execution_info, ~use_csv)
         );
       | _ => notify("I was not able to log in or retrieve a token.")
       }
@@ -230,6 +225,10 @@ let cleanup = () => {
   cleanup_directory("diffs");
 };
 
+/*
+ * Display a manufactured timestamp, based on a json entry's
+ * timestamp and duration.
+ */
 let display_timestamp = (ts, te) => {
   switch(float_of_string(te)) {
   | exception Failure(_) => notify("Duration is not a float value.")
@@ -266,6 +265,10 @@ module ArgSet = Set.Make({
 exception MissingArgument(string);
 exception InvalidArgument(string);
 
+/*
+ * Return a set of symbolic representations of
+ * command line arguments
+ */
 let rec process_args = (args, ret) => {
   switch(args) {
   | [] => ret
@@ -288,6 +291,9 @@ let rec process_args = (args, ret) => {
   };
 };
 
+/*
+ * Let's get started
+ */
 let () = {
   switch(Sys.argv) {
   | [|_|] => display_help()
@@ -315,15 +321,21 @@ let () = {
         },
         args
       );
+
       let (host_info, run_info, config_info) = Config.read_info(arg_dir_path^);
+
+      let plugin_info = Plugins.load_plugins();
+
       execute_actions(
         Web.get_json(arg_source_file^),
         host_info,
         run_info,
         config_info,
+        plugin_info,
         arg_use_csv^,
         arg_no_login^
       );
+
       cleanup();
     | false => ()
     }

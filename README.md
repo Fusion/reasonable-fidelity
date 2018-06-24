@@ -16,11 +16,18 @@ Attributes/files you do not wish to compare can be added to 'ignore' files.
 - Use this file to replay and compare
 - Fine tune ignored attributes in config/ directory
 
+### Some Features
+
+- CSV or full text output
+- Multiple configuration environments
+- Cookies or dedicated token
+- Plugins (written in Python)
+- ...
+
 ## TODO
 
 - more advanced attribute extractors
 - more configurable login
-- cookies, beyond token
 
 ## Using
 

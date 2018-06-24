@@ -2,7 +2,10 @@ open Printf;
 open Cohttp_lwt_unix;
 
 /*
- This web context relies on a dynamic resolver that will memoize resolutions.
+ * This web context relies on a dynamic resolver that will memoize host resolutions.
+ * This is good to work around wonky resolvers. If we were to use a statid resolver,
+ * it could fail now and then, which is too bad since we are actually testing our app,
+ * not the network it is built on.
  */
 let get_web_context = () => {
   let resolver = {

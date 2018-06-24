@@ -10,12 +10,18 @@ let run_modifications_diff = () => {
   }
 };
 
+/*
+ * Store the content of our original response, and the content of our current response
+ */
 let create_comparison_files = (left, right) => {
   ensure_dir_exists("diffs");
   write_file("diffs/diff.left.tmp", Str.global_replace(Str.regexp(","), "\n", left));
   write_file("diffs/diff.right.tmp", Str.global_replace(Str.regexp(","), "\n", right));
 };
 
+/*
+ * Run command-line diff command and store result
+ */
 let create_diff_file = (context) => {
   let diff_command = switch(context.Web.run_info.diff_command) {
   | Some(command) => command
@@ -30,6 +36,9 @@ let create_diff_file = (context) => {
   }
 };
 
+/*
+ * Return attribute found in current json line
+ */
 let extracted_attribute_name = (index_name) => {
   Str.replace_first(
     Str.regexp({|.*"\(.+\)".*|}),
@@ -38,6 +47,13 @@ let extracted_attribute_name = (index_name) => {
   )
 };
 
+/*
+ * Compare attribute retrieved from current json line.
+ * Return false if we have renamed our attribute.
+ * Return true if our attributes are equal, or in the ignore list
+ * Return true if a plugin tells us to ignore it
+ * Finally, return false if, after these checks, the attribute's values differ
+ */
 let compare_attributes = (context, left, right) => {
   let left_bits = Str.bounded_split(Str.regexp(":"), left, 2);
   let right_bits = Str.bounded_split(Str.regexp(":"), right, 2);
@@ -51,6 +67,9 @@ let compare_attributes = (context, left, right) => {
     else {
       /* Check if this is an attribute found in the ignore list */
       if(Web.StringSet.mem(left_index_name, context.Web.config_info.ignore_attributes)) {
+        true
+      }
+      else if(Plugins.if_any(context.plugin_info, "should_ignore_attribute", [Lymp.Pystr(left_index_name)])) {
         true
       }
       else {

@@ -52,14 +52,20 @@ type config_info = {
 
 type action_context = {
   config_info,
+  plugin_info: Plugins.PluginMap.t(Plugins.plugin_info),
   host_info,
   run_info,
   execution_info,
   use_csv
 };
 
-let build_context = (~config_info, ~host_info, ~run_info, ~execution_info, ~use_csv) => {
+/*
+ * Build a new context record based on data retrieved from an existing record,
+ * merged with updated values
+ */
+let build_context = (~config_info, ~plugin_info, ~host_info, ~run_info, ~execution_info, ~use_csv) => {
   config_info,
+  plugin_info,
   host_info,
   run_info,
   execution_info,
@@ -116,6 +122,9 @@ let get_client_auth_headers = (context) => {
   }
 };
 
+/*
+ * TODO Too many assumptions in this function.
+ */
 let perform_login = (no_login, host_info) => {
   switch(no_login) {
   | true => (Success("No Login"), StringMap.empty, Some(""))

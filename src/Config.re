@@ -73,6 +73,10 @@ let read_config_file = (dir_path) => {
     sprintf("%s/default.cfg", dir_path));
 };
 
+/*
+ * Read an ignore list from a file.
+ * Each line contains an ignored entity (URL, attribute...)
+ */
 let read_ignore_list = (dir_path, name) =>
   List.fold_left((accu, item) =>
     StringSet.add(item, accu),
@@ -80,6 +84,10 @@ let read_ignore_list = (dir_path, name) =>
     Str.split(Str.regexp("\n"), CfrIO.read_file(sprintf("%s/ignored.%s", dir_path, name)))
   );
 
+/*
+ * Read current configuration, either from default
+ * configuration files or an alternate directory
+ */
 let read_info = (dir_path) => {
   let ignore_endpoints = read_ignore_list(dir_path, "endpoints");
   let ignore_attributes = read_ignore_list(dir_path, "attributes");
