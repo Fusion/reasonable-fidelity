@@ -28,7 +28,7 @@ let _start_at = (new option_cp)(
   string_wrappers,
   ~group,
   ["run_info", "start_at"],
-  Some("2018-06-05T21:29:01.797Z/362.029445011"),
+  None,
   "Only start test when matching this record timestamp/duration");
 let _stop_at = (new option_cp)(
   string_wrappers,

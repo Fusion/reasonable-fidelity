@@ -8,7 +8,7 @@ open ExtLib;
 type cmdlineargs =
   | Source_file(string)
   | Config_dir(string)
-  | NoLogin
+  | ForceLogin
   | Csv;
 
 /*
@@ -89,7 +89,10 @@ let execute_action = (action, context) => {
 
   let response = action |> member("response");
   let content = response |> member("content");
-  let text = content |> member("text") |> to_string;
+  let text = switch(content |> member("size") |> to_int) {
+  | 0 => ""
+  | _ => content |> member("text") |> to_string
+  };
   let mime_type = content |> member("mimeType") |> to_string;
   switch method {
   | "GET" =>
@@ -97,8 +100,18 @@ let execute_action = (action, context) => {
     if (! context.Web.use_csv) notify_begin(sprintf("Querying: %s ... ", url));
     Web.(
       switch (execute_get(url, query_string, context)) {
-      | Success(response) => process_response(context, url, "get", mime_type, text, response)
-      | Failure(code, response) => notify(build_report_str(context, url, "get", code, response))
+      | (Success(response), cookies_option) =>
+        process_response(context, url, "get", mime_type, text, response);
+        switch(cookies_option) {
+        | Some(cookies) => build_context_patch_cookies(context, cookies)
+        | None => context
+        }
+      | (Failure(code, response), cookies_option) =>
+        notify(build_report_str(context, url, "get", code, response));
+        switch(cookies_option) {
+        | Some(cookies) => build_context_patch_cookies(context, cookies)
+        | None => context
+        }
       }
     );
   | "POST" =>
@@ -106,8 +119,18 @@ let execute_action = (action, context) => {
     if (! context.Web.use_csv) notify_begin(sprintf("Posting to: %s ... ", url));
     Web.(
       switch (execute_post(url, post_data, context)) {
-      | Success(response) => process_response(context, url, "post", mime_type, text, response)
-      | Failure(code, response) => notify(build_report_str(context, url, "post", code, response))
+      | (Success(response), cookies_option) =>
+        process_response(context, url, "post", mime_type, text, response);
+        switch(cookies_option) {
+        | Some(cookies) => build_context_patch_cookies(context, cookies)
+        | None => context
+        }
+      | (Failure(code, response), cookies_option) =>
+        notify(build_report_str(context, url, "post", code, response));
+        switch(cookies_option) {
+        | Some(cookies) => build_context_patch_cookies(context, cookies)
+        | None => context
+        }
       }
     );
   | "PUT" =>
@@ -115,11 +138,23 @@ let execute_action = (action, context) => {
     if (! context.Web.use_csv) notify_begin(sprintf("Putting to: %s ... ", url));
     Web.(
       switch (execute_put(url, post_data, context)) {
-      | Success(response) => process_response(context, url, "put", mime_type, text, response)
-      | Failure(code, response) => notify(build_report_str(context, url, "put", code, response))
+      | (Success(response), cookies_option) =>
+        process_response(context, url, "put", mime_type, text, response);
+        switch(cookies_option) {
+        | Some(cookies) => build_context_patch_cookies(context, cookies)
+        | None => context
+        }
+      | (Failure(code, response), cookies_option) =>
+        notify(build_report_str(context, url, "put", code, response));
+        switch(cookies_option) {
+        | Some(cookies) => build_context_patch_cookies(context, cookies)
+        | None => context
+        }
       }
     );
-  | method_ => notify(sprintf("Unsupported Method: %s", method_))
+  | method_ =>
+    notify(sprintf("Unsupported Method: %s", method_));
+    context
   };
 };
 
@@ -142,41 +177,15 @@ let rec traverse_actions = (list_of_actions, context) => {
     | (Not_Executing, Some(start_at), _) when start_at != ts =>
       traverse_actions(tail, context)
     | (Not_Executing, Some(start_at), _) =>
-      let execution_info = {
-        cookies: context.execution_info.cookies,
-        token: context.execution_info.token,
-        executing: Executing
-      };
-      let new_context =
-        build_context(
-          ~config_info=context.config_info,
-          ~plugin_info=context.plugin_info,
-          ~host_info=context.host_info,
-          ~run_info=context.run_info,
-          ~execution_info,
-          ~use_csv=context.use_csv
-        );
-      execute_action(head, new_context);
+      let tmp_context = build_context_patch_executing(context, Executing);
+      let new_context = execute_action(head, tmp_context);
       traverse_actions(tail, new_context);
     | (Executing, _, Some(stop_at)) when stop_at == ts =>
-      let execution_info = {
-        cookies: context.execution_info.cookies,
-        token: context.execution_info.token,
-        executing: Not_Executing
-      };
-      let new_context =
-        build_context(
-          ~config_info=context.config_info,
-          ~plugin_info=context.plugin_info,
-          ~host_info=context.host_info,
-          ~run_info=context.run_info,
-          ~execution_info,
-          ~use_csv=context.use_csv
-        );
+      let new_context = build_context_patch_executing(context, Not_Executing);
       traverse_actions(tail, new_context);
     | (Executing, _, _) =>
-      execute_action(head, context);
-      traverse_actions(tail, context);
+      let new_context = execute_action(head, context);
+      traverse_actions(tail, new_context);
     | _ =>
       raise(Failure("Unsupported state mix while traversing action list."))
     };
@@ -251,7 +260,7 @@ let display_help = () => {
   notify("        --csv: output csv data rather than plain text");
   notify("         -source <file_name>: specify alternate .har file");
   notify("         -config <dir_name>: specify alternate config directory");
-  notify("         -nologin: does not attempt log in to service\n");
+  notify("         -forcelogin: attempt log in to service rather than trust cookies/token (experimental!)\n");
   notify("modified:\n    show which lines were changed from the reference capture\n");
   notify("timestamp <startedDateTime> <time>:\n    return a timestamp for 'start_at'/'stop_at' configuration\n");
   notify("reset:\n    re-create default configuration file\n");
@@ -275,7 +284,7 @@ let rec process_args = (args, ret) => {
   | [head, ...tail] =>
     switch(head) {
     | "--csv" => ArgSet.add(Csv, process_args(tail, ret))
-    | "--nologin" => ArgSet.add(NoLogin, process_args(tail, ret))
+    | "--forcelogin" => ArgSet.add(ForceLogin, process_args(tail, ret))
     | "--source" =>
       switch(tail) {
       | [] => raise(MissingArgument("--source"))
@@ -307,14 +316,14 @@ let () = {
         Array.to_list(Array.sub(arguments, 2, Array.length(arguments) - 2)),
         ArgSet.empty);
       let arg_use_csv = ref(false);
-      let arg_no_login = ref(false);
+      let arg_no_login = ref(true);
       let arg_source_file = ref("example.har");
       let arg_dir_path = ref("config");
       ArgSet.iter(
         k => {
           switch(k) {
           | Csv => arg_use_csv := true
-          | NoLogin => arg_no_login := true
+          | ForceLogin => arg_no_login := false
           | Source_file(file_name) => arg_source_file := file_name
           | Config_dir(dir_path) => arg_dir_path := dir_path
           }

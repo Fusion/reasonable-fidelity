@@ -72,6 +72,44 @@ let build_context = (~config_info, ~plugin_info, ~host_info, ~run_info, ~executi
   use_csv
 };
 
+/*
+ * Build patched context, where executing state is changed
+ */
+let build_context_patch_executing = (context, executing) => {
+  let execution_info = {
+    cookies: context.execution_info.cookies,
+    token: context.execution_info.token,
+    executing: Executing
+  };
+  build_context(
+    ~config_info=context.config_info,
+    ~plugin_info=context.plugin_info,
+    ~host_info=context.host_info,
+    ~run_info=context.run_info,
+    ~execution_info,
+    ~use_csv=context.use_csv
+  )
+};
+
+/*
+ * Build patched context, where cookies list is updated
+ */
+let build_context_patch_cookies = (context, cookies) => {
+  let execution_info = {
+    cookies: cookies,
+    token: context.execution_info.token,
+    executing: context.execution_info.executing
+  };
+  build_context(
+    ~config_info=context.config_info,
+    ~plugin_info=context.plugin_info,
+    ~host_info=context.host_info,
+    ~run_info=context.run_info,
+    ~execution_info,
+    ~use_csv=context.use_csv
+  )
+};
+
 let ctx = WebContext.get_web_context();
 
 let get_json = file_name => Yojson.Basic.from_file(file_name);
@@ -90,6 +128,21 @@ let get_cookies_from_header_string = header_string => {
     StringMap.empty,
     Str.split(Str.regexp("\n"), header_string)
   )
+};
+
+let update_cookies_from_header_string = (context, header_string) => {
+  let new_cookies = get_cookies_from_header_string(header_string);
+  let old_cookies = context.execution_info.cookies;
+  StringMap.merge((k,o1,o2) => {
+      switch(o1, o2) {
+      | (Some(v1), Some(v2)) => Some(v2)
+      | (None, Some(v2)) => Some(v2)
+      | (Some(v1), None) => Some(v1)
+      | (None, None) => None
+      }
+    },
+    old_cookies,
+    new_cookies);
 };
 
 /*
@@ -189,7 +242,7 @@ let execute_get = (url, query_string, context) => {
       )
     };
   let timeout =
-    Lwt_unix.sleep(context.run_info.timeouts) >|= (() => (Failure(-1, "Timeout")));
+    Lwt_unix.sleep(context.run_info.timeouts) >|= (() => (Failure(-1, "Timeout"), None));
   let main_t =
     Client.get(
       ~ctx,
@@ -201,15 +254,18 @@ let execute_get = (url, query_string, context) => {
       Uri.of_string(full_query)
     )
     >>= (
-      ((resp, body)) =>
+      ((resp, body)) => {
+        let header_string = resp |> Response.headers |> Header.to_string;
+        let cookies = update_cookies_from_header_string(context, header_string);
         switch (Cohttp_lwt.Response.status(resp)) {
         | `OK =>
-          body |> Cohttp_lwt.Body.to_string >|= (body => Success(body))
+          body |> Cohttp_lwt.Body.to_string >|= (body => (Success(body), Some(cookies)))
         | code =>
           body
           |> Cohttp_lwt.Body.to_string
-          >|= (body => (Failure(code |> Code.code_of_status, body)))
+          >|= (body => (Failure(code |> Code.code_of_status, body), Some(cookies)))
         }
+      }
     );
   Lwt_main.run(Lwt.pick([timeout, main_t]));
 };
@@ -217,7 +273,7 @@ let execute_get = (url, query_string, context) => {
 let execute_post = (url, post_data, context) => {
   open Yojson.Basic.Util;
   let timeout =
-    Lwt_unix.sleep(context.run_info.timeouts) >|= (() => (Failure(-1, "Timeout")));
+    Lwt_unix.sleep(context.run_info.timeouts) >|= (() => (Failure(-1, "Timeout"), None));
   let main_t =
     Client.post(
       ~ctx,
@@ -230,15 +286,18 @@ let execute_post = (url, post_data, context) => {
       Uri.of_string(url)
     )
     >>= (
-      ((resp, body)) =>
+      ((resp, body)) => {
+        let header_string = resp |> Response.headers |> Header.to_string;
+        let cookies = update_cookies_from_header_string(context, header_string);
         switch (Cohttp_lwt.Response.status(resp)) {
         | `OK =>
-          body |> Cohttp_lwt.Body.to_string >|= (body => Success(body))
+          body |> Cohttp_lwt.Body.to_string >|= (body => (Success(body), Some(cookies)))
         | code =>
           body
           |> Cohttp_lwt.Body.to_string
-          >|= (body => (Failure(code |> Code.code_of_status, body)))
+          >|= (body => (Failure(code |> Code.code_of_status, body), Some(cookies)))
         }
+      }
     );
   Lwt_main.run(Lwt.pick([timeout, main_t]));
 };
@@ -246,7 +305,7 @@ let execute_post = (url, post_data, context) => {
 let execute_put = (url, post_data, context) => {
   open Yojson.Basic.Util;
   let timeout =
-    Lwt_unix.sleep(context.run_info.timeouts) >|= (() => (Failure(-1, "Timeout")));
+    Lwt_unix.sleep(context.run_info.timeouts) >|= (() => (Failure(-1, "Timeout"), None));
   let main_t =
     Client.put(
       ~ctx,
@@ -259,15 +318,18 @@ let execute_put = (url, post_data, context) => {
       Uri.of_string(url)
     )
     >>= (
-      ((resp, body)) =>
+      ((resp, body)) => {
+        let header_string = resp |> Response.headers |> Header.to_string;
+        let cookies = update_cookies_from_header_string(context, header_string);
         switch (Cohttp_lwt.Response.status(resp)) {
         | `OK =>
-          body |> Cohttp_lwt.Body.to_string >|= (body => Success(body))
+          body |> Cohttp_lwt.Body.to_string >|= (body => (Success(body), Some(cookies)))
         | code =>
           body
           |> Cohttp_lwt.Body.to_string
-          >|= (body => (Failure(code |> Code.code_of_status, body)))
+          >|= (body => (Failure(code |> Code.code_of_status, body), Some(cookies)))
         }
+      }
     );
   Lwt_main.run(Lwt.pick([timeout, main_t]));
 };

@@ -82,21 +82,22 @@ let compare_attributes = (context, left, right) => {
   }
 };
 
+let compare_single_line = (context, line) => {
+  let bits = Str.split(Str.regexp(" *\t+ *"), line);
+  switch(List.length(bits), bits) {
+  | (2, [">", b2]) => false
+  | (2, [b1, "<"]) => false
+  | (3, [b1, "|", b3]) => compare_attributes(context, b1, b3)
+  | (3, [b1, ">", b3]) => false
+  | (3, [b1, "<", b3]) => false
+  | (2, _) => true
+  | (_, _) => false
+  }
+};
+
 let compare_diff_file = (context) => {
   let lines = Str.split(Str.regexp("\n"), read_file("diffs/diffed-left-right.txt"));
-  List.for_all(line => {
-    let bits = Str.split(Str.regexp(" *\t+ *"), line);
-    switch(List.length(bits), bits) {
-    | (2, [">", b2]) => false
-    | (2, [b1, "<"]) => false
-    | (3, [b1, "|", b3]) => compare_attributes(context, b1, b3)
-    | (3, [b1, ">", b3]) => false
-    | (3, [b1, "<", b3]) => false
-    | (2, _) => true
-    | (_, _) => false
-    }
-  },
-  lines)
+  List.for_all(compare_single_line(context), lines)
 };
 
 let compare_responses = (context, left, right) => {

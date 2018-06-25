@@ -16,7 +16,14 @@ _build/**
 *.native
 *.byte
 *.install
+*.iml
 pkg/META
 .merlin
 /node_modules/
 .idea/
+diffs/
+*.har
+gmailconfig/
+ovconfig/
+plugins/__pycache__
+plugins/python_log

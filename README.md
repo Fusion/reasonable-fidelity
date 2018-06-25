@@ -28,6 +28,7 @@ Attributes/files you do not wish to compare can be added to 'ignore' files.
 
 - more advanced attribute extractors
 - more configurable login
+- Point Free composition!
 
 ## Using
 
