@@ -38,13 +38,16 @@ Valid Arguments:
 help:
     display help
 
+sanity:
+    check requirements & help explain issues
+
 run:
     run tests
     options:
         --csv: output csv data rather than plain text
          -source <file_name>: specify alternate .har file
          -config <dir_name>: specify alternate config directory
-         -nologin: does not attempt log in to service
+         -forcelogin: attempt log in to service rather than trust cookies/token (experimental!)
 
 modified:
     show which lines were changed from the reference capture
@@ -63,17 +66,17 @@ From scratch, really...
 OS X
 ```bash
 brew install opam
-opam init
-opam update && opam switch 4.05.0
 ```
 Linux
 ```bash
 sudo apt install m4
 wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin
 ```
-Then
+Then (Common)
 ```bash
-opam install reason lwt cohttp cohttp-lwt-unix yojson config-file
+opam init
+opam update && opam switch 4.05.0
+opam install reason lwt tls cohttp cohttp-lwt-unix yojson config-file lymp extlib
 ```
 
 ## Specifics of this code
