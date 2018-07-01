@@ -1,3 +1,4 @@
+open Printf;
 open CfrIO;
 open Lymp;
 open ExtLib;
@@ -40,38 +41,56 @@ let get_plugins_list = () => {
   all_files
 };
 
-/*
- * Build a reference table for all declared plugins alongside their
- * invocation reference and stated capabilities.
- */
-let load_plugins = () => {
-  let interpreter =
+let get_interpreter = () => {
     switch(
       run_command(
         "which python3",
         None)) {
     | 0 => "python3"
     | _ => "python"
-    };
+    }
+};
 
-  let py = init(~exec=interpreter, "plugins");
+let check_requisites = interpreter => {
+  switch(
+    run_command(
+      sprintf("%s -c \"import pymongo\"", interpreter),
+      None)) {
+  | 0 => true
+  | _ => false
+  }
+};
 
-  List.fold_left((accu, name) => {
-    let module_ref = get_module(py, name);
-    let capabilities = CapabilitySet.of_list(
-      List.map(capability =>
-        switch(capability) {
-        | Pystr(s) => s
-        | invalid_ => raise(UnexpectedCapabilityType(invalid_))
-        },
-        get_list(module_ref, "get_capabilities", [])));
-    PluginMap.add(name, {
-      module_ref: module_ref,
-      capabilities: capabilities
-      }, accu)
-    },
-    PluginMap.empty,
-    get_plugins_list())
+/*
+ * Build a reference table for all declared plugins alongside their
+ * invocation reference and stated capabilities.
+ */
+let load_plugins = () => {
+  let interpreter = get_interpreter();
+  
+  if (!check_requisites(interpreter)) {
+    PluginMap.empty
+  }
+  else {
+    let py = init(~exec=interpreter, "plugins");
+
+    List.fold_left((accu, name) => {
+      let module_ref = get_module(py, name);
+      let capabilities = CapabilitySet.of_list(
+        List.map(capability =>
+          switch(capability) {
+          | Pystr(s) => s
+          | invalid_ => raise(UnexpectedCapabilityType(invalid_))
+          },
+          get_list(module_ref, "get_capabilities", [])));
+      PluginMap.add(name, {
+        module_ref: module_ref,
+        capabilities: capabilities
+        }, accu)
+      },
+      PluginMap.empty,
+      get_plugins_list())
+  }
 };
 
 /*

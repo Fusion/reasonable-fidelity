@@ -39,6 +39,7 @@ let ensure_dir_exists = dir_name => {
 
 let empty_directory = dir_name => {
   open Unix;
+  ensure_dir_exists(dir_name);
   let cur_dir = getcwd();
   chdir(dir_name);
   Array.iter(unlink, Sys.readdir("."));
@@ -65,6 +66,6 @@ let cleanup_directory = dir_name => {
 let run_command = (command, out_path) => {
   switch(out_path) {
   | Some(path) => Sys.command(command ++ " > " ++ path)
-  | None => Sys.command(command ++ " > /dev/null")
+  | None => Sys.command(command ++ " > /dev/null 2>&1")
   };
 };

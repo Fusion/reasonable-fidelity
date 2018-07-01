@@ -225,6 +225,14 @@ let check_requisites = () => {
   ["diff", "grep"])
 };
 
+let check_plugins = () => {
+    switch(Plugins.check_requisites(Plugins.get_interpreter())) {
+    |  true => ()
+    | false =>
+      notify("You may be missing the python bson library: please install pymongo.\nPlugins will be disabled until you do.")
+    };
+};
+
 let prepare = () => {
   empty_directory("diffs");
   check_requisites()
@@ -255,6 +263,7 @@ let display_modifications = () => {
 let display_help = () => {
   notify("Valid Arguments:\n");
   notify("help:\n    display help\n");
+  notify("sanity:\n    check requirements & help explain issues\n");
   notify("run:\n    run tests");
   notify("    options:");
   notify("        --csv: output csv data rather than plain text");
@@ -264,6 +273,11 @@ let display_help = () => {
   notify("modified:\n    show which lines were changed from the reference capture\n");
   notify("timestamp <startedDateTime> <time>:\n    return a timestamp for 'start_at'/'stop_at' configuration\n");
   notify("reset:\n    re-create default configuration file\n");
+};
+
+let display_sanity = () => {
+  ignore(check_requisites());
+  ignore(check_plugins());
 };
 
 module ArgSet = Set.Make({
@@ -307,6 +321,7 @@ let () = {
   switch(Sys.argv) {
   | [|_|] => display_help()
   | [|_, "help"|] => display_help()
+  | [|_, "sanity"|] => display_sanity()
   | [|_, "timestamp", ts, te|] => display_timestamp(ts, te)
   | [|_, "reset"|] => Config.write_default_config_file()
   | arguments when arguments[1] == "run" =>
