@@ -3,4 +3,4 @@
 (executable
  ((name main)
   (public_name reasonable-fidelity)
-  (libraries (lwt cohttp cohttp-lwt-unix yojson str config-file extlib lymp))))
+  (libraries (lwt cohttp cohttp-lwt-unix yojson str config-file extlib lymp diff))))
