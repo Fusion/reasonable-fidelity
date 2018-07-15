@@ -76,7 +76,7 @@ Then (Common)
 ```bash
 opam init
 opam update && opam switch 4.05.0
-opam install reason lwt tls cohttp cohttp-lwt-unix yojson config-file lymp extlib
+opam install reason lwt tls cohttp cohttp-lwt-unix yojson config-file lymp curses extlib
 ```
 
 ## Specifics of this code
