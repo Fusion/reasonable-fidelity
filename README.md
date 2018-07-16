@@ -55,6 +55,9 @@ modified:
 timestamp <startedDateTime> <time>:
     return a timestamp for 'start_at'/'stop_at' configuration
 
+edit <filename>:
+    edit har file -- for now, mark actions for deletion
+
 reset:
     re-create default configuration file
 ```
