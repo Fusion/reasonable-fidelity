@@ -75,6 +75,9 @@ let display_help = () => {
   notify(
     "timestamp <startedDateTime> <time>:\n    return a timestamp for 'start_at'/'stop_at' configuration\n",
   );
+  notify(
+    "edit <filename>:\n    edit har file -- for now, mark actions for deletion\n",
+  );
   notify("reset:\n    re-create default configuration file\n");
 };
 
@@ -180,6 +183,6 @@ let () =
       } :
       ()
   | [|_, "modified"|] => display_modifications()
-  | [|_, "edit", fn|] => Editor.edit_source(Web.get_json(fn))
+  | [|_, "edit", fn|] => Editor.edit_source(fn)
   | _ => display_help()
   };

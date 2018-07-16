@@ -3,6 +3,7 @@ open Lwt;
 open Cohttp;
 open Cohttp_lwt_unix;
 open ExtLib;
+open CfrIO;
 
 module StringSet = Set.Make({
   type t = string;
@@ -113,6 +114,11 @@ let build_context_patch_cookies = (context, cookies) => {
 let ctx = WebContext.get_web_context();
 
 let get_json = file_name => Yojson.Basic.from_file(file_name);
+
+let put_json = (file_name, json_content) => {
+  write_file(sprintf("%s.bak", file_name), read_file(file_name));
+  write_file(file_name, json_content);
+};
 
 /*
  Generic case: we need to memorize and send cookies back

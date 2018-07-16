@@ -1,8 +1,3 @@
-open Printf;
-open Lwt;
-open Cohttp;
-open Cohttp_lwt_unix;
-open CfrIO;
 open Curses;
 
 /***********************************
@@ -45,9 +40,15 @@ type actions_elements = {
   offsets: offsets
 };
 
+type info_elements = {
+  status: window,
+  size: size
+};
+
 type screen_elements = {
   screen: window,
-  actions_elements: actions_elements
+  actions_elements: actions_elements,
+  info_elements: info_elements
 };
 
 let json_to_entries = (json_content) => {
@@ -79,10 +80,18 @@ let build_actions_elements = (wrapper, pad, height, width, offset_y, offset_x) =
   }
 };
 
-let build_screen_elements = (screen, actions_elements) => {
+let build_info_elements = (status, size) => {
+  {
+    status: status,
+    size: size
+  }
+};
+
+let build_screen_elements = (screen, actions_elements, info_elements) => {
   {
     screen: screen,
-    actions_elements: actions_elements
+    actions_elements: actions_elements,
+    info_elements: info_elements
   }
 };
 
@@ -180,6 +189,7 @@ let add_actions_area = (parent, screen_info, rows_count) => {
 
 let refresh_actions_area = (screen_elements) => {
   wnoutrefresh(screen_elements.screen) |> ignore;
+
   touchwin(screen_elements.actions_elements.wrapper) |> ignore;
   wnoutrefresh(screen_elements.actions_elements.wrapper) |> ignore;
   pnoutrefresh(
@@ -190,7 +200,11 @@ let refresh_actions_area = (screen_elements) => {
     screen_elements.actions_elements.size.height,
     screen_elements.actions_elements.size.width
   ) |> ignore;
-  doupdate();
+
+  wnoutrefresh(screen_elements.screen) |> ignore;
+  touchwin(screen_elements.info_elements.status) |> ignore;
+  wnoutrefresh(screen_elements.info_elements.status) |> ignore;
+  doupdate() |> ignore;
 };
 
 let rec fill_actions_area = (screen_elements, entries, row) => {
@@ -232,6 +246,10 @@ let scroll_actions_area = (screen_elements, entries_array, direction, rows_count
         screen_elements.actions_elements.size.width,
         new_offset(screen_elements.actions_elements.offsets.y, direction, rows_count),
         screen_elements.actions_elements.offsets.x
+      ),
+      build_info_elements(
+        screen_elements.info_elements.status,
+        screen_elements.info_elements.size,
       )
     );
 
@@ -282,31 +300,107 @@ let update_entry_status = (screen_elements, entries_array, row, action_toggle) =
     row,
     updated_text,
     updated_action,
-    DisplayAttrNone
+    DisplayAttrHighlighted
   );
 
   (screen_elements, entries_array)
 };
 
-let rec main_loop = ((screen_elements, entries_array), rows_count) => {
-  refresh_actions_area(screen_elements) |> ignore;
+let centered = (text, width) => {
+  (width - String.length(text)) / 2
+};
 
+let add_info_area = (parent, height, width) => {
+  let msg1 = "Reasonable Fidelity Editor v0.0.1";
+  let msg2 = "Use 'up' and 'down' arrows to navigate";
+  let msg3 = "Hit '-' to mark an action for deletion";
+  let msg4 = "Hit 's' to save current state";
+  let msg5 = "Hit 'q' to exit editor without saving";
+
+  let info_area = derwin(parent, height - 2, width - 2, 1, 1);
+  mvwaddstr(info_area, 0, centered(msg1, width), msg1) |> ignore;
+  mvwaddstr(info_area, 2, 1, msg2) |> ignore;
+  mvwaddstr(info_area, 3, 1, msg3) |> ignore;
+  mvwaddstr(info_area, 4, 1, msg4) |> ignore;
+  mvwaddstr(info_area, 5, 1, msg5) |> ignore;
+
+  (info_area)
+};
+
+let update_status = (screen_elements, text) => {
+  mvwaddstr(
+    screen_elements.info_elements.status,
+    screen_elements.info_elements.size.height - 3,
+    0,
+    String.make(screen_elements.actions_elements.size.width, ' ')
+  ) |> ignore;
+  mvwaddstr(
+    screen_elements.info_elements.status,
+    screen_elements.info_elements.size.height - 3,
+    1,
+    text) |> ignore;
+};
+
+let save_changes = (file_name, screen_elements, entries_array) => {
+  /*
+         List.filter(name =>
+      Str.string_match(plugin_name_matcher, name, 0),
+      Array.to_list(Sys.readdir("."))));
+      */
+   let json_entries = `List(List.map(item =>
+      item.data,
+      List.filter(item =>
+        item.action != ActionDelete,
+        Array.to_list(entries_array))));
+  let entries = `Assoc([
+    ("entries", json_entries)
+  ]);
+  let top = `Assoc([
+    ("log", entries)
+  ]);
+  Web.put_json(file_name, top |> Yojson.Basic.pretty_to_string);
+  update_status(
+    screen_elements,
+    Printf.sprintf("Written file '%s' and backup.", file_name)
+  );
+
+  (screen_elements, entries_array)
+};
+
+let rec main_loop = ((screen_elements, entries_array), rows_count, file_name) => {
+  refresh_actions_area(screen_elements);
+
+  /*
+   * 45:  '-'
+   * 113: 'q'
+   * 115: 's'
+   * 258: down arrow
+   * 259: up arrow
+   */
   switch(getch()) {
-  | 27 => ()
+  | 113 => ()
+  | 115 =>
+    update_status(screen_elements, "Saving Changes...");
+    main_loop(save_changes(file_name, screen_elements, entries_array), rows_count, file_name)
   | 258 =>
-    main_loop(scroll_actions_area(screen_elements, entries_array, 1, rows_count), rows_count)
+    update_status(screen_elements, "Ready.");
+    main_loop(scroll_actions_area(screen_elements, entries_array, 1, rows_count), rows_count, file_name)
   | 259 =>
-    main_loop(scroll_actions_area(screen_elements, entries_array, -1, rows_count), rows_count)
+    update_status(screen_elements, "Ready.");
+    main_loop(scroll_actions_area(screen_elements, entries_array, -1, rows_count), rows_count, file_name)
   | 45 =>
+    update_status(screen_elements, "Toggled deletion flag.");
     main_loop(
       update_entry_status(
         screen_elements,
         entries_array,
         screen_elements.actions_elements.offsets.y,
         ActionDelete),
-      rows_count)
-  | code_ =>
-    Printf.printf("%d\n", code_); main_loop((screen_elements, entries_array), rows_count)
+      rows_count,
+      file_name)
+  | _ =>
+    update_status(screen_elements, "Unknown key.");
+    main_loop((screen_elements, entries_array), rows_count, file_name)
   }
 };
 
@@ -314,32 +408,44 @@ let rec main_loop = ((screen_elements, entries_array), rows_count) => {
  * main *
  ********/
 
-let edit_source = (json_content) => {
-  let entries_array = json_to_entries(json_content) |> from_json_list_to_info_array;
+let edit_source = (file_name) => {
+  let entries_array = Web.get_json(file_name) |> json_to_entries |> from_json_list_to_info_array;
   let rows_count = Array.length(entries_array);
+
+  let info_window_height = 10;
 
   let screen = initscr();
   initialize_colors() |> ignore;
   let (screen_height, screen_width) = getmaxyx(screen);
   let cur_screen_info = {
     width: screen_width,
-    height: screen_height
+    height: screen_height - info_window_height
   };
   cbreak() |> ignore;
   noecho() |> ignore;
   keypad(screen, true) |> ignore;
 
-  let (actions_wrapper, actions_pad, actions_height, actions_width) = add_actions_area(screen, cur_screen_info, rows_count);
+  let interactive_window = derwin(screen, cur_screen_info.height, cur_screen_info.width , 0, 0);
+  draw_borders(interactive_window);
+  let (actions_wrapper, actions_pad, actions_height, actions_width) = add_actions_area(interactive_window, cur_screen_info, rows_count);
+
+  let info_window = derwin(screen, info_window_height, cur_screen_info.width , cur_screen_info.height, 0);
+  draw_borders(info_window);
+  mvwhline(info_window, info_window_height - 3, 1, 0, cur_screen_info.width - 2);
+  let info_area = add_info_area(info_window, info_window_height, cur_screen_info.width);
+
   let cur_screen_elements =
     build_screen_elements(
       screen,
-      build_actions_elements(actions_wrapper, actions_pad, actions_height, actions_width, 0, 0)
+      build_actions_elements(actions_wrapper, actions_pad, actions_height, actions_width, 0, 0),
+      build_info_elements(info_area, {height: info_window_height, width: cur_screen_info.width})
     );
-  draw_borders(screen);
 
   fill_actions_area(cur_screen_elements, Array.to_list(entries_array), 0);
 
-  main_loop((cur_screen_elements, entries_array), rows_count);
+  update_status(cur_screen_elements, "Ready.");
+
+  main_loop(scroll_actions_area(cur_screen_elements, entries_array, 0, rows_count), rows_count, file_name);
 
   nocbreak() |> ignore;
   echo() |> ignore;
