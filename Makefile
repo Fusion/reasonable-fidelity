@@ -42,6 +42,16 @@ curses_howto:
 build:
 	jbuilder build
 
+release: releases/reasonable-fidelity-macos releases/reasonable-fidelity-linux
+
+releases/reasonable-fidelity-macos:
+	@echo "Storing macos release in releases/" && \
+	cp _build/default/src/main.exe releases/reasonable-fidelity-macos
+
+releases/reasonable-fidelity-linux:
+	@echo "Storing linux release in releases/" && \
+	docker cp ubuntu-headless:/home/chris/reasonable-fidelity/_build/default/src/main.exe releases/reasonable-fidelity-linux
+
 run: build
 	./_build/install/default/bin/reasonable-fidelity run
 
