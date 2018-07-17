@@ -27,3 +27,4 @@ gmailconfig/
 ovconfig/
 plugins/__pycache__
 plugins/python_log
+ocaml-curses-1.0.3/
