@@ -99,6 +99,30 @@ let build_screen_elements = (screen, actions_elements, info_elements) => {
  * Display helpers *
  *******************/
 
+let initialize_colors = () => {
+  start_color() |> ignore;
+  /* Regular standout */
+  init_pair(1, Color.black, Color.white) |> ignore;
+  /* Delete */
+  init_pair(2, Color.red, 0) |> ignore;
+  init_pair(3, Color.red, Color.white);
+  init_pair(4, Color.black, Color.blue);
+};
+
+let get_standard_color = () => A.color_pair(0);
+
+let get_crazy_color = () => A.color_pair(4);
+
+let get_highlighted_color = () => A.color_pair(1);
+
+let get_delete_color = () => A.color_pair(2);
+
+let get_highlighted_delete_color = () => A.color_pair(3);
+
+let get_display_attribute = (attribute_name, arg) => {
+  attribute_name == arg
+};
+
 let draw_borders = (win) => {
   let acs = get_acs_codes();
   wborder(
@@ -112,27 +136,6 @@ let draw_borders = (win) => {
     acs.Acs.llcorner,
     acs.Acs.lrcorner
   );
-};
-
-let initialize_colors = () => {
-  start_color() |> ignore;
-  /* Regular standout */
-  init_pair(1, Color.black, Color.white) |> ignore;
-  /* Delete */
-  init_pair(2, Color.red, 0) |> ignore;
-  init_pair(3, Color.red, Color.white);
-};
-
-let get_standard_color = () => A.color_pair(0);
-
-let get_highlighted_color = () => A.color_pair(1);
-
-let get_delete_color = () => A.color_pair(2);
-
-let get_highlighted_delete_color = () => A.color_pair(3);
-
-let get_display_attribute = (attribute_name, arg) => {
-  attribute_name == arg
 };
 
 let display_actions_area_row = (screen_elements, row, text, action, display_attributes) => {
@@ -328,6 +331,9 @@ let add_info_area = (parent, height, width) => {
 };
 
 let update_status = (screen_elements, text) => {
+  wattron(
+    screen_elements.info_elements.status,
+    get_crazy_color()) |> ignore;
   mvwaddstr(
     screen_elements.info_elements.status,
     screen_elements.info_elements.size.height - 3,
@@ -339,6 +345,9 @@ let update_status = (screen_elements, text) => {
     screen_elements.info_elements.size.height - 3,
     1,
     text) |> ignore;
+  wattroff(
+    screen_elements.info_elements.status,
+    get_crazy_color()) |> ignore;
 };
 
 let save_changes = (file_name, screen_elements, entries_array) => {
@@ -423,6 +432,7 @@ let edit_source = (file_name) => {
   };
   cbreak() |> ignore;
   noecho() |> ignore;
+  curs_set(0) |> ignore;
   keypad(screen, true) |> ignore;
 
   let interactive_window = derwin(screen, cur_screen_info.height, cur_screen_info.width , 0, 0);

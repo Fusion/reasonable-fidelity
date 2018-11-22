@@ -32,6 +32,7 @@ ocaml-curses-1.0.3/patched:
 	@echo "\n# Patching curses source code file\n" && \
 	cd ocaml-curses-1.0.3 && \
 	autoreconf && \
+	configure --enable-widec && \
 	sed -i '/if test -n "$$TERM_H_STRING"/i   TERM_H_STRING="<term.h>"' configure && \
 	touch patched
 

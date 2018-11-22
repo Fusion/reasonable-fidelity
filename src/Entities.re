@@ -130,18 +130,138 @@ let compare_single_line = (context, line) => {
   };
 };
 
-let compare_diff_file = context => {
+let compare_diff_file_the_naive_way = context => {
   let lines =
     Str.split(Str.regexp("\n"), read_file("diffs/diffed-left-right.txt"));
   List.for_all(compare_single_line(context), lines);
 };
 
-let compare_responses = (context, left, right) =>
+let should_ignore_attribute: (Web.action_context, string) => bool
+= (context, attribute_name) => {
+  /* Check if this is an attribute found in the ignore list */
+  if(Web.StringSet.mem(
+       attribute_name,
+       context.Web.config_info.ignore_attributes)) {
+    true
+  } else if (Plugins.if_any(
+               context.plugin_info,
+               "should_ignore_attribute",
+               [Lymp.Pystr(attribute_name)],
+  )) {
+    true
+  } else {
+    false
+  };
+};
+
+let smart_compare: (Web.action_context, string, string) => bool
+= (context, left, right) => {
+  open Yojson.Basic;
+
+  ensure_dir_exists("diffs");
+
+  let rec expander = (item1, item2) => {
+    let is_same = (name1, name2, v1, v2) => {
+      if(should_ignore_attribute(context, name1)) {
+        true
+      }
+      else {
+        (name1 == name2 && v1 == v2)
+      }
+    };
+
+    switch((item1, item2)) {
+    | ((name1, json1), (name2, json2)) => {
+        switch ((json1, json2)) {
+        | (`Assoc(a1), `Assoc(a2)) =>
+            List.fold_left2(
+              (accu, query1, query2) => List.append(accu, expander(query1, query2)),
+              [],
+              a1,
+              a2
+            )
+        | (`List(l1), `List(l2)) => {
+            /* TODO "Serialize" similarly to:
+             * List.for_all2(List.for_all2(expander), List.map(Util.to_assoc, jl1), List.map(Util.to_assoc, jl2));
+             */
+            List.fold_left2(
+              (accu, item1, item2) =>
+                List.append(
+                  accu,
+                  switch((item1, item2)) {
+                  | (`Assoc(a1), `Assoc(a2)) => {
+                      List.fold_left2(
+                        (accu, query1, query2) => List.append(accu, expander(query1, query2)),
+                        [],
+                        a1,
+                        a2
+                      )
+                    }
+                  | _ => [(false, "[ERROR] Only assoc supported in list for now")]
+                  }
+                ),
+              [],
+              l1, l2    
+            )
+        }
+        | (`Bool(b1), `Bool(b2))     => [(is_same(name1, name2, b1, b2), Printf.sprintf("%s: %b -> %s: %b\n", name1, b1, name2, b2))]
+        | (`Float(f1), `Float(f2))   => [(is_same(name1, name2, f1, f2), Printf.sprintf("%s: %f -> %s: %f", name1, f1, name2, f2))]
+        | (`Int(i1), `Int(i2))       => [(is_same(name1, name2, i1, i2), Printf.sprintf("%s: %d -> %s: %d", name1, i1, name2, i2))]
+        | (`Null, `Null)             => [(is_same(name1, name2,  0,  0), Printf.sprintf("%s -> %s", name1, name2))]
+        | (`String(s1), `String(s2)) => [(is_same(name1, name2, s1, s2), Printf.sprintf("%s: \"%s\" -> %s:\"%s\"", name1, s1, name2, s2))]
+        | _                          => [(false, Printf.sprintf("[ERROR] Mismatch: %s -> %s\n", name1, name2))]
+        }
+      }
+    };
+  };
+
+  let res = List.fold_left2(
+      (accu, query1, query2) => List.append(accu, expander(query1, query2)),
+      [],
+      left |> from_string |> Util.to_assoc,
+      right |> from_string |> Util.to_assoc
+  );
+  /* Debug
+  List.iter(item => { switch(item) { | (b, s) => Printf.printf("%b: %s\n", b, s) } }, res);
+  */
+  let issue_details = List.map(
+    item =>
+      switch(item) {
+      | (_, detail) => detail
+      },
+    List.filter( 
+      row => {
+        switch(row) {
+        | (false, _) => true
+        | _ => false
+        }
+      },
+      res
+    )
+  );
+  /* If at least one row isn't a match, write a diff file to be later
+     picked up and saved as evidence.
+     This is an uglier contract than needs to be,
+     for purely historical reasons, and it will need fixing. */
+  switch(issue_details) {
+  | [] => true
+  | l => {
+      write_file_from_list("diffs/diffed-left-right.txt", issue_details);
+      false
+    }
+  }
+};
+
+let compare_responses: (Web.action_context, string, string) => bool
+= (context, left, right) =>
   if (left == right) {
     true;
   } else {
+    /*
     create_comparison_files(left, right);
     create_diff_file(context);
-    /* test_create_diff_file(context); */
-    compare_diff_file(context);
+
+    compare_diff_file_the_naive_way(context);
+    */
+    smart_compare(context, left, right);
   };

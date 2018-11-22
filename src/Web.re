@@ -23,6 +23,8 @@ type http_operation_result =
   | Success(string)
   | Failure(int, string);
 
+type cookies_info = StringMap.t(string);
+
 type host_info = {
   ip: string,
   user: string,
@@ -39,7 +41,7 @@ type run_info = {
 };
 
 type execution_info = {
-  cookies: StringMap.t(string),
+  cookies: cookies_info,
   token: string,
   executing: execution_status
 };
@@ -51,9 +53,11 @@ type config_info = {
   ignore_attributes: StringSet.t
 };
 
+type plugin_info = Plugins.PluginMap.t(Plugins.plugin_info);
+
 type action_context = {
   config_info,
-  plugin_info: Plugins.PluginMap.t(Plugins.plugin_info),
+  plugin_info,
   host_info,
   run_info,
   execution_info,
@@ -76,7 +80,8 @@ let build_context = (~config_info, ~plugin_info, ~host_info, ~run_info, ~executi
 /*
  * Build patched context, where executing state is changed
  */
-let build_context_patch_executing = (context, executing) => {
+let build_context_patch_executing: (action_context, execution_status) => action_context
+= (context, executing) => {
   let execution_info = {
     cookies: context.execution_info.cookies,
     token: context.execution_info.token,
@@ -95,7 +100,8 @@ let build_context_patch_executing = (context, executing) => {
 /*
  * Build patched context, where cookies list is updated
  */
-let build_context_patch_cookies = (context, cookies) => {
+let build_context_patch_cookies: (action_context, cookies_info) => action_context
+= (context, cookies) => {
   let execution_info = {
     cookies: cookies,
     token: context.execution_info.token,
@@ -115,7 +121,8 @@ let ctx = WebContext.get_web_context();
 
 let get_json = file_name => Yojson.Basic.from_file(file_name);
 
-let put_json = (file_name, json_content) => {
+let put_json: (string, string) => unit
+= (file_name, json_content) => {
   write_file(sprintf("%s.bak", file_name), read_file(file_name));
   write_file(file_name, json_content);
 };
@@ -123,7 +130,8 @@ let put_json = (file_name, json_content) => {
 /*
  Generic case: we need to memorize and send cookies back
  */
-let get_cookies_from_header_string = header_string => {
+let get_cookies_from_header_string: string => StringMap.t(string)
+= header_string => {
   let cookie_matcher = Str.regexp({|set-cookie: \([^;, ]+\)=\([^;, ]*\)|});
 
   List.fold_left((accu, item) =>
@@ -136,7 +144,8 @@ let get_cookies_from_header_string = header_string => {
   )
 };
 
-let update_cookies_from_header_string = (context, header_string) => {
+let update_cookies_from_header_string: (action_context, string) => cookies_info
+= (context, header_string) => {
   let new_cookies = get_cookies_from_header_string(header_string);
   let old_cookies = context.execution_info.cookies;
   StringMap.merge((k,o1,o2) => {
@@ -155,7 +164,8 @@ let update_cookies_from_header_string = (context, header_string) => {
  If the application being tested sets a cookie containing a session token,
  we will memorize that token and re use it in future requests.
  */
-let get_token_from_header_string = header_string => {
+let get_token_from_header_string: string => option(string)
+= header_string => {
   let access_token_matcher =
     Str.regexp({|set-cookie: accessToken=\([a-f0-9\-]+\);.+|});
   switch (Str.search_forward(access_token_matcher, header_string, 0)) {
@@ -168,7 +178,8 @@ let get_token_from_header_string = header_string => {
  Based on settings, we will now return either a list of cookies
  as previously retrieved, or a token value
  */
-let get_client_auth_headers = (context) => {
+let get_client_auth_headers: action_context => list((string, string))
+= (context) => {
   switch(context.run_info.use_token_not_cookies) {
   | true =>
     [("Cookie", "accessToken=" ++ context.execution_info.token)]
@@ -184,7 +195,8 @@ let get_client_auth_headers = (context) => {
 /*
  * TODO Too many assumptions in this function.
  */
-let perform_login = (no_login, host_info) => {
+let perform_login: (bool, host_info) => (http_operation_result, cookies_info, option(string))
+= (no_login, host_info) => {
   switch(no_login) {
   | true => (Success("No Login"), StringMap.empty, Some(""))
   | false =>
@@ -226,7 +238,8 @@ let perform_login = (no_login, host_info) => {
   }
 };
 
-let execute_get = (url, query_string, context) => {
+let execute_get: (string, list(Yojson.Basic.json), action_context) => (http_operation_result, option(cookies_info))
+= (url, query_string, context) => {
   open Yojson.Basic.Util;
   let full_query =
     switch query_string {
@@ -276,7 +289,8 @@ let execute_get = (url, query_string, context) => {
   Lwt_main.run(Lwt.pick([timeout, main_t]));
 };
 
-let execute_post = (url, post_data, context) => {
+let execute_post: (string, string, action_context) => (http_operation_result, option(cookies_info))
+= (url, post_data, context) => {
   open Yojson.Basic.Util;
   let timeout =
     Lwt_unix.sleep(context.run_info.timeouts) >|= (() => (Failure(-1, "Timeout"), None));
@@ -308,7 +322,8 @@ let execute_post = (url, post_data, context) => {
   Lwt_main.run(Lwt.pick([timeout, main_t]));
 };
 
-let execute_put = (url, post_data, context) => {
+let execute_put: (string, string, action_context) => (http_operation_result, option(cookies_info))
+= (url, post_data, context) => {
   open Yojson.Basic.Util;
   let timeout =
     Lwt_unix.sleep(context.run_info.timeouts) >|= (() => (Failure(-1, "Timeout"), None));

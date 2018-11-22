@@ -11,7 +11,8 @@ open ExtLib;
  * Return true if the mime-type is one considered unimportant, or if a plugin
  * instructs us to ignore the response
  */
-let should_ignore_response = (context, url, mime_type) =>
+let should_ignore_response: (Web.action_context, string, string) => bool
+= (context, url, mime_type) =>
   Web.(
     switch (
       StringSet.mem(url, context.config_info.ignore_endpoints),
@@ -35,7 +36,8 @@ let should_ignore_response = (context, url, mime_type) =>
 /*
  * The most recent diff output gets an official name
  */
-let dump_diff = url =>
+let dump_diff: string => unit
+= url =>
   rename_file(
     "diffs/diffed-left-right.txt",
     "diffs/diffed-" ++ encode_uri_to_path(url) ++ ".txt",
@@ -45,7 +47,8 @@ let dump_diff = url =>
  * Build string to display to report success/failure
  * following the appropriate format (CSV, full text)
  */
-let build_report_str = (context, url, methd, code, response) =>
+let build_report_str: (Web.action_context, string, string, int, string) => string
+= (context, url, methd, code, response) =>
   context.Web.use_csv ?
     switch (code) {
     | 200 => sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, "")
@@ -78,7 +81,8 @@ let build_report_str = (context, url, methd, code, response) =>
       }
     );
 
-let process_response = (context, url, methd, mime_type, reference_text, text) =>
+let process_response: (Web.action_context, string, string, string, string, string) => unit
+= (context, url, methd, mime_type, reference_text, text) =>
   if (should_ignore_response(context, url, mime_type)) {
     notify(build_report_str(context, url, methd, 0, "Ignoring"));
   } else {
@@ -98,7 +102,8 @@ let process_response = (context, url, methd, mime_type, reference_text, text) =>
     };
   };
 
-let execute_action = (action, context) => {
+let execute_action: (Yojson.Basic.json, Web.action_context) => Web.action_context
+= (action, context) => {
   open Yojson.Basic.Util;
   let request = action |> member("request");
   let method = request |> member("method") |> to_string;
@@ -184,9 +189,12 @@ let execute_action = (action, context) => {
   };
 };
 
-let rec traverse_actions = (list_of_actions, context) => {
+let rec traverse_actions: (list(Yojson.Basic.json), Web.action_context) => unit
+= (list_of_actions, context) => {
   open Web;
-  Unix.sleepf(context.run_info.pause);
+  if(context.run_info.pause > 0.) {
+    Unix.sleepf(context.run_info.pause);
+  };
   switch (list_of_actions) {
   | [] => ()
   | [head, ...tail] =>

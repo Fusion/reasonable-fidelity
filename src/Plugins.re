@@ -27,7 +27,8 @@ let plugin_name_cleaner = Str.regexp({|\.py|});
 /*
  * Retrieve list of plugin modules found in `plugins`
  */
-let get_plugins_list = () => {
+let get_plugins_list: unit => list(string)
+= () => {
   open Unix;
 
   let cur_dir = getcwd();
@@ -41,7 +42,8 @@ let get_plugins_list = () => {
   all_files
 };
 
-let get_interpreter = () => {
+let get_interpreter: unit => string
+= () => {
     switch(
       run_command(
         "which python3",
@@ -51,7 +53,8 @@ let get_interpreter = () => {
     }
 };
 
-let check_requisites = interpreter => {
+let check_requisites: string => bool
+= interpreter => {
   switch(
     run_command(
       sprintf("%s -c \"import pymongo\"", interpreter),
@@ -65,7 +68,8 @@ let check_requisites = interpreter => {
  * Build a reference table for all declared plugins alongside their
  * invocation reference and stated capabilities.
  */
-let load_plugins = () => {
+let load_plugins: unit => PluginMap.t(plugin_info)
+= () => {
   let interpreter = get_interpreter();
   
   if (!check_requisites(interpreter)) {
@@ -97,7 +101,8 @@ let load_plugins = () => {
  * Plugin condition:
  * Return true if any plugin matches the capability
  */
-let if_any = (plugin_map, capability_name, args) => {
+let if_any: (PluginMap.t(plugin_info), string, 'a) => bool
+= (plugin_map, capability_name, args) => {
   ! PluginMap.for_all((k, v) => {
     switch(CapabilitySet.mem(capability_name, v.capabilities)) {
     | false => true
@@ -114,7 +119,8 @@ let if_any = (plugin_map, capability_name, args) => {
  * Plugin condition:
  * TBD
  */
-let if_option = (plugin_map, capability_name, args) => {
+let if_option: (PluginMap.t(plugin_info), string, 'a) => option(string)
+= (plugin_map, capability_name, args) => {
 /* TODO */
   None
 };

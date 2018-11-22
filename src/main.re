@@ -64,10 +64,10 @@ let display_help = () => {
   notify("run:\n    run tests");
   notify("    options:");
   notify("        --csv: output csv data rather than plain text");
-  notify("         -source <file_name>: specify alternate .har file");
-  notify("         -config <dir_name>: specify alternate config directory");
+  notify("        --source <file_name>: specify alternate .har file");
+  notify("        --config <dir_name>: specify alternate config directory");
   notify(
-    "         -forcelogin: attempt log in to service rather than trust cookies/token (experimental!)\n",
+    "        --forcelogin: attempt log in to service rather than trust cookies/token (experimental!)\n",
   );
   notify(
     "modified:\n    show which lines were changed from the reference capture\n",
