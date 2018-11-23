@@ -184,25 +184,42 @@ let smart_compare: (Web.action_context, string, string) => bool
             /* TODO "Serialize" similarly to:
              * List.for_all2(List.for_all2(expander), List.map(Util.to_assoc, jl1), List.map(Util.to_assoc, jl2));
              */
-            List.fold_left2(
-              (accu, item1, item2) =>
+            switch(List.fold_left2(
+              (accu, item1, item2) => {
                 List.append(
                   accu,
                   switch((item1, item2)) {
                   | (`Assoc(a1), `Assoc(a2)) => {
-                      List.fold_left2(
+                      switch(List.fold_left2(
                         (accu, query1, query2) => List.append(accu, expander(query1, query2)),
                         [],
                         a1,
                         a2
-                      )
+                      )) {
+                      | result => result
+                      | exception Invalid_argument(arg) => Printf.printf("WTF"); []
+                      | exception _ => Printf.printf("WTF"); []
+                      }
                     }
                   | _ => [(false, "[ERROR] Only assoc supported in list for now")]
                   }
-                ),
+                )
+              },
               [],
               l1, l2    
-            )
+            )){
+              | result => result
+              | exception e => {
+                let c1 = Helpers.list_size(l1);
+                let c2 = Helpers.list_size(l2);
+                if (c1 != c2) {
+                  [(false, Printf.sprintf("[ERROR] List sizes differ: %d vs %d (parent: %s)", c1, c2, name1))]
+                }
+                else {
+                  [(false, Printf.sprintf("[ERROR] Unknown error comparing lists (parent: %s): %s", name1, Printexc.to_string(e)))]
+                }
+              }
+            }
         }
         | (`Bool(b1), `Bool(b2))     => [(is_same(name1, name2, b1, b2), Printf.sprintf("%s: %b -> %s: %b\n", name1, b1, name2, b2))]
         | (`Float(f1), `Float(f2))   => [(is_same(name1, name2, f1, f2), Printf.sprintf("%s: %f -> %s: %f", name1, f1, name2, f2))]

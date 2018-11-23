@@ -24,6 +24,7 @@ let should_ignore_response: (Web.action_context, string, string) => bool
     | (_, "application/x-font-woff") => true
     | (_, "image/png") => true
     | (_, "image/jpg") => true
+    | (_, "x-unknown") => true
     | (_, _) =>
       Plugins.if_any(
         context.plugin_info,
