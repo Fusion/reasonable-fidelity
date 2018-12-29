@@ -231,7 +231,7 @@ let rec fill_actions_area = (screen_elements, entries, row) => {
 
 let new_offset = (cur_offset, direction, rows_count) => {
   switch(direction > 0, cur_offset + direction) {
-  | (true, offset) when offset > rows_count => rows_count
+  | (true, offset) when offset >= rows_count => rows_count - 1
   | (true, offset) => offset
   | (false, offset) when offset < 0 => 0
   | (false, offset) => offset
@@ -385,6 +385,8 @@ let rec main_loop = ((screen_elements, entries_array), rows_count, file_name) =>
    * 115: 's'
    * 258: down arrow
    * 259: up arrow
+   * 339: down arrow
+   * 338: up arrow
    */
   switch(getch()) {
   | 113 => ()
@@ -394,9 +396,15 @@ let rec main_loop = ((screen_elements, entries_array), rows_count, file_name) =>
   | 258 =>
     update_status(screen_elements, "Ready.");
     main_loop(scroll_actions_area(screen_elements, entries_array, 1, rows_count), rows_count, file_name)
+  | 338 =>
+    update_status(screen_elements, "Ready.");
+    main_loop(scroll_actions_area(screen_elements, entries_array, 10, rows_count), rows_count, file_name)
   | 259 =>
     update_status(screen_elements, "Ready.");
     main_loop(scroll_actions_area(screen_elements, entries_array, -1, rows_count), rows_count, file_name)
+  | 339 =>
+    update_status(screen_elements, "Ready.");
+    main_loop(scroll_actions_area(screen_elements, entries_array, -10, rows_count), rows_count, file_name)
   | 45 =>
     update_status(screen_elements, "Toggled deletion flag.");
     main_loop(
