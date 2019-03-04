@@ -32,6 +32,7 @@ type host_info = {
 };
 
 type run_info = {
+  debug_level: int,
   use_token_not_cookies: bool,
   start_at: option(string),
   stop_at: option(string),

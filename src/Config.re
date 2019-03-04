@@ -19,6 +19,11 @@ let _password = (new string_cp)(
   ["host_info", "password"],
   "password",
   "Password (or none if no login is required)");
+let _debug_level = (new int_cp)(
+  ~group,
+  ["run_info", "debug_level"],
+  0,
+  "For more verbose output.");
 let _use_token_not_cookies = (new bool_cp)(
   ~group,
   ["run_info", "use_token_not_cookies"],
@@ -101,6 +106,7 @@ let read_info = (dir_path) => {
       password: _password#get
     },
     {
+      debug_level: _debug_level#get,
       use_token_not_cookies: _use_token_not_cookies#get,
       start_at: _start_at#get,
       stop_at: _stop_at#get,

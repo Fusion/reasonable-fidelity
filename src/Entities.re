@@ -274,11 +274,18 @@ let compare_responses: (Web.action_context, string, string) => bool
   if (left == right) {
     true;
   } else {
+    if(context.run_info.debug_level > 5) { Printf.printf("compare_responses::start\n");};
     /*
     create_comparison_files(left, right);
     create_diff_file(context);
 
     compare_diff_file_the_naive_way(context);
     */
-    smart_compare(context, left, right);
+    switch(smart_compare(context, left, right)) {
+    | response => response
+    | exception _ => {
+       Printf.printf("Oh an exception!!!");
+       false
+    }
+    }
   };

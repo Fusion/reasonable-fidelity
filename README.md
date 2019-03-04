@@ -97,3 +97,18 @@ My first ReasonML app! So, yeah, it's not perfect,
 - `>>=` equivalent to Lwt.bind
 - `>|=` equivalent to Lwd.map (right side does not return a promise)
 - '=<<` and `=|<` are reversed versions
+
+### Misc Notes
+
+Parallel queries
+
+- We can use Lwt.run(Lwt.join(...
+- execute.get is good
+- we could run up to n threads in parallel
+- ...or until we meet execute.post
+- All pending threads to be stored in a list...
+- Orchestrated in execute.get?
+- Q: what to do about pause when > 0.?
+- Do something about non-csv output, which is broken up
+
+- {action, url, query_string, post_data)
