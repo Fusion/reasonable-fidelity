@@ -246,7 +246,7 @@ let smart_compare: (Web.action_context, string, string) => bool
       switch(item) {
       | (_, detail) => detail
       },
-    List.filter( 
+    List.filter(
       row => {
         switch(row) {
         | (false, _) => true
@@ -276,6 +276,7 @@ let compare_responses: (Web.action_context, string, string) => bool
   } else {
     if(context.run_info.debug_level > 5) { Printf.printf("compare_responses::start\n");};
     /*
+      DEAD CODE
     create_comparison_files(left, right);
     create_diff_file(context);
 
