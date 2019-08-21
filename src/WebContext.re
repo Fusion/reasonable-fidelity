@@ -53,3 +53,5 @@ let get_web_context = () => {
   };
   Client.custom_ctx(~resolver, ());
 };
+
+// vim: syntax=reason

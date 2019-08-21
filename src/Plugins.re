@@ -124,3 +124,5 @@ let if_option: (PluginMap.t(plugin_info), string, 'a) => option(string)
 /* TODO */
   None
 };
+
+// vim: syntax=reason

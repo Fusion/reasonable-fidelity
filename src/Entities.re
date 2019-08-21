@@ -290,3 +290,5 @@ let compare_responses: (Web.action_context, string, string) => bool
     }
     }
   };
+
+// vim: syntax=reason

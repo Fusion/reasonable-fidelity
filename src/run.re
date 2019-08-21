@@ -257,3 +257,5 @@ let execute_actions =
       }
     )
   );
+
+  // vim: syntax=reason

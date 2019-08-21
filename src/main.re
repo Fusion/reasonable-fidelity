@@ -186,3 +186,5 @@ let () =
   | [|_, "edit", fn|] => Editor.edit_source(fn)
   | _ => display_help()
   };
+
+// vim: syntax=reason

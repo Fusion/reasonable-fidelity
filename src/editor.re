@@ -470,3 +470,5 @@ let edit_source = (file_name) => {
   endwin();
   ()
 };
+
+// vim: syntax=reason

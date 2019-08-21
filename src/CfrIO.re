@@ -88,3 +88,5 @@ let run_command: (string, option(string)) => int
   | Some(path) => Sys.command(command ++ " > " ++ path)
   | None => Sys.command(command ++ " > /dev/null 2>&1")
   };
+
+// vim: syntax=reason

@@ -120,3 +120,5 @@ let read_info = (dir_path) => {
     }
   )
 };
+
+// vim: syntax=reason

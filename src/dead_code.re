@@ -29,4 +29,4 @@
   /* let redirect_url = response |> member("redirect_url"); */
   /* let size = content |> member("size") |> to_int; */
 
-
+// vim: syntax=reason

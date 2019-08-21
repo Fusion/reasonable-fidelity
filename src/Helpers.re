@@ -37,3 +37,5 @@ let dump_json_list = json => {
 
   List.iter(List.iter(f), List.map(Util.to_assoc, json));
 };
+
+// vim: syntax=reason
