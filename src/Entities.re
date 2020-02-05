@@ -46,6 +46,7 @@ let create_diff_file = context => {
   };
 };
 
+/** Disabled
 let test_create_diff_file = context => {
   open Printf;
   open Odiff;
@@ -72,6 +73,7 @@ let test_create_diff_file = context => {
   );
   ();
 };
+*/
 
 /*
  * Return attribute found in current json line
@@ -120,11 +122,11 @@ let compare_attributes = (context, left, right) => {
 let compare_single_line = (context, line) => {
   let bits = Str.split(Str.regexp(" *\t+ *"), line);
   switch (List.length(bits), bits) {
-  | (2, [">", b2]) => false
-  | (2, [b1, "<"]) => false
+  | (2, [">", _]) => false
+  | (2, [_, "<"]) => false
   | (3, [b1, "|", b3]) => compare_attributes(context, b1, b3)
-  | (3, [b1, ">", b3]) => false
-  | (3, [b1, "<", b3]) => false
+  | (3, [_, ">", _]) => false
+  | (3, [_, "<", _]) => false
   | (2, _) => true
   | (_, _) => false
   };
@@ -197,7 +199,7 @@ let smart_compare: (Web.action_context, string, string) => bool
                         a2
                       )) {
                       | result => result
-                      | exception Invalid_argument(arg) => Printf.printf("WTF"); []
+                      | exception Invalid_argument(_) => Printf.printf("WTF"); []
                       | exception _ => Printf.printf("WTF"); []
                       }
                     }
@@ -262,7 +264,7 @@ let smart_compare: (Web.action_context, string, string) => bool
      for purely historical reasons, and it will need fixing. */
   switch(issue_details) {
   | [] => true
-  | l => {
+  | _ => {
       write_file_from_list("diffs/diffed-left-right.txt", issue_details);
       false
     }

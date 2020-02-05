@@ -1,8 +1,9 @@
 open Printf;
-open Config_file;
+open Toml;
 open Web;
 
 /* All preserved configuration-related information */
+/*
 let group = new group;
 let _ip = (new string_cp)(
   ~group,
@@ -56,8 +57,10 @@ let _diff_command = (new option_cp)(
   ["run_info", "diff_command"],
   Some("diff -y"),
   "System command to execute to generate diff bits.");
+*/
 /* */
 
+/*
 let write_default_config_file = () => {
   group#write("config/default.cfg");
 };
@@ -77,6 +80,16 @@ let read_config_file = (dir_path) => {
         },
     sprintf("%s/default.cfg", dir_path));
 };
+*/
+
+let write_default_config_file = () => {
+  ()
+}
+
+let read_config_file = (dir_path) => {
+  let _ = CfrIO.read_file(sprintf("%s/default.toml", dir_path)) |> Parser.from_string |> Parser.unsafe;
+  /* TomlTypes.Table.find(Toml.key("key"), tt); */
+}
 
 /*
  * Read an ignore list from a file.
@@ -101,18 +114,18 @@ let read_info = (dir_path) => {
 
   (
     {
-      ip: _ip#get,
-      user: _user#get,
-      password: _password#get
+      ip: "127.0.0.1",
+      user: "user",
+      password: "password"
     },
     {
-      debug_level: _debug_level#get,
-      use_token_not_cookies: _use_token_not_cookies#get,
-      start_at: _start_at#get,
-      stop_at: _stop_at#get,
-      pause: _pause#get,
-      timeouts: _timeouts#get,
-      diff_command: _diff_command#get
+      debug_level: 0,
+      use_token_not_cookies: false,
+      start_at: None,
+      stop_at: None,
+      pause: 0.5,
+      timeouts: 5.0,
+      diff_command: Some("diff -y")
     },
     {
       ignore_endpoints: ignore_endpoints,

@@ -32,8 +32,8 @@ ocaml-curses-1.0.3/patched:
 	@echo "\n# Patching curses source code file\n" && \
 	cd ocaml-curses-1.0.3 && \
 	autoreconf && \
-	configure --enable-widec && \
 	sed -i '/if test -n "$$TERM_H_STRING"/i   TERM_H_STRING="<term.h>"' configure && \
+	./configure --enable-widec && \
 	touch patched
 
 curses_howto:
@@ -41,7 +41,7 @@ curses_howto:
 	echo "then do not forget to:\n\n    cd ocaml-curses-1.0.3\n    make all opt install\n"
 
 build:
-	jbuilder build
+	dune build
 
 release: releases/reasonable-fidelity-macos releases/reasonable-fidelity-linux
 

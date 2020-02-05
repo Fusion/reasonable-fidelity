@@ -1,0 +1,20 @@
+[host_info]
+ip = "127.0.0.1"
+# User name (or none if no login is required)
+user = "user"
+# Password (or none if no login is required)
+password = "password"
+
+[run_info]
+# Set to true for specific cases
+use_token_not_cookies = false
+# Only start test when matching this record timestamp/duration
+start_at = ""
+# Stop testing when matching this record timestamp/duration.
+stop_at = ""
+# Pause for this duration (in seconds: float) between steps.
+pause = 0
+# Each step can take up to this time (in seconds) before timeing out.
+timeouts = 5
+# System command to execute to generate diff bits.
+diff_command = "diff -y"

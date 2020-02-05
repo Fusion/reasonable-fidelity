@@ -1,5 +1,5 @@
 
-let list_size = lst => List.fold_left((accu, item) => accu + 1, 0, lst);
+let list_size = lst => List.fold_left((accu, _) => accu + 1, 0, lst);
 
 let print_list = lst => List.iter(item => Printf.printf(item), lst);
 

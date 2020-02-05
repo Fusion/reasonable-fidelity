@@ -26,7 +26,7 @@ type actiontype =
 
 type item_info = {
   action: actiontype,
-  data: Yojson.Basic.json
+  data: Yojson.Basic.t
 };
 
 type displayattributes =
@@ -105,8 +105,8 @@ let initialize_colors = () => {
   init_pair(1, Color.black, Color.white) |> ignore;
   /* Delete */
   init_pair(2, Color.red, 0) |> ignore;
-  init_pair(3, Color.red, Color.white);
-  init_pair(4, Color.black, Color.blue);
+  init_pair(3, Color.red, Color.white) |> ignore;
+  init_pair(4, Color.black, Color.blue) |> ignore;
 };
 
 let get_standard_color = () => A.color_pair(0);
@@ -214,7 +214,7 @@ let rec fill_actions_area = (screen_elements, entries, row) => {
   switch(entries) {
     | [] => ()
     | [head, ...tail] => {
-        let (text, action) = get_entry_content(head);
+        let (text, _) = get_entry_content(head);
         display_actions_area_row(
           screen_elements,
           row,

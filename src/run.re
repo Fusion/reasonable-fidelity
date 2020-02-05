@@ -1,9 +1,5 @@
 open Printf;
-open Lwt;
-open Cohttp;
-open Cohttp_lwt_unix;
 open CfrIO;
-open ExtLib;
 
 /*
  * Check whether a server response should not be verified against the
@@ -56,7 +52,7 @@ let build_report_str: (Web.action_context, string, string, int, string) => strin
     | 0 => sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, response)
     | code_ when code_ < 1 =>
       sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, response)
-    | code_ => sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, "")
+    | _ => sprintf("\"%s\",\"%s\",%d,\"%s\"", url, methd, code, "")
     } :
     (
       switch (
@@ -77,7 +73,7 @@ let build_report_str: (Web.action_context, string, string, int, string) => strin
         | 200 => response
         | 0 => response
         | code_ when code_ < 1 => sprintf("Error type: %s", response)
-        | code_ => sprintf("Error code: %d", code)
+        | _ => sprintf("Error code: %d", code)
         }
       }
     );
@@ -103,7 +99,7 @@ let process_response: (Web.action_context, string, string, string, string, strin
     };
   };
 
-let execute_action: (Yojson.Basic.json, Web.action_context) => Web.action_context
+let execute_action: (Yojson.Basic.t, Web.action_context) => Web.action_context
 = (action, context) => {
   open Yojson.Basic.Util;
   if(context.run_info.debug_level > 5) { Printf.printf("execute_action::start\n");};
@@ -191,7 +187,7 @@ let execute_action: (Yojson.Basic.json, Web.action_context) => Web.action_contex
   };
 };
 
-let rec traverse_actions: (list(Yojson.Basic.json), Web.action_context) => unit
+let rec traverse_actions: (list(Yojson.Basic.t), Web.action_context) => unit
 = (list_of_actions, context) => {
   open Web;
   if(context.run_info.debug_level > 5) { Printf.printf("traverse_actions::start\n");};
@@ -213,7 +209,7 @@ let rec traverse_actions: (list(Yojson.Basic.json), Web.action_context) => unit
     ) {
     | (Not_Executing, Some(start_at), _) when start_at != ts =>
       traverse_actions(tail, context)
-    | (Not_Executing, Some(start_at), _) =>
+    | (Not_Executing, Some(_), _) =>
       let tmp_context = build_context_patch_executing(context, Executing);
       let new_context = execute_action(head, tmp_context);
       traverse_actions(tail, new_context);
@@ -234,11 +230,11 @@ let execute_actions =
   Yojson.Basic.Util.(
     Web.(
       switch (perform_login(no_login, host_info)) {
-      | (Success(response), cookies, Some(token)) =>
+      | (Success(_), cookies, Some(token)) =>
         if(run_info.debug_level > 5) { Printf.printf("execute_actions::start\n");};
         let will_be_executing =
           switch (run_info.start_at) {
-          | Some(start_at) => Not_Executing
+          | Some(_) => Not_Executing
           | None => Executing
           };
         let execution_info = {cookies, token, executing: will_be_executing};

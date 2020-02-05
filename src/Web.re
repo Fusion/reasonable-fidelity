@@ -2,17 +2,17 @@ open Printf;
 open Lwt;
 open Cohttp;
 open Cohttp_lwt_unix;
-open ExtLib;
+/*open ExtLib;*/
 open CfrIO;
 
 module StringSet = Set.Make({
   type t = string;
-  let compare = Pervasives.compare;
+  let compare = Stdlib.compare;
 });
 
 module StringMap = Map.Make({
   type t = string;
-  let compare = Pervasives.compare;
+  let compare = Stdlib.compare;
 });
 
 type execution_status =
@@ -82,7 +82,7 @@ let build_context = (~config_info, ~plugin_info, ~host_info, ~run_info, ~executi
  * Build patched context, where executing state is changed
  */
 let build_context_patch_executing: (action_context, execution_status) => action_context
-= (context, executing) => {
+= (context, _) => {
   let execution_info = {
     cookies: context.execution_info.cookies,
     token: context.execution_info.token,
@@ -138,7 +138,7 @@ let get_cookies_from_header_string: string => StringMap.t(string)
   List.fold_left((accu, item) =>
     switch (Str.search_forward(cookie_matcher, item, 0)) {
     | exception Not_found => accu
-    | idx => StringMap.add(Str.matched_group(1, item), Str.matched_group(2, item), accu)
+    | _ => StringMap.add(Str.matched_group(1, item), Str.matched_group(2, item), accu)
     },
     StringMap.empty,
     Str.split(Str.regexp("\n"), header_string)
@@ -149,9 +149,9 @@ let update_cookies_from_header_string: (action_context, string) => cookies_info
 = (context, header_string) => {
   let new_cookies = get_cookies_from_header_string(header_string);
   let old_cookies = context.execution_info.cookies;
-  StringMap.merge((k,o1,o2) => {
+  StringMap.merge((_,o1,o2) => {
       switch(o1, o2) {
-      | (Some(v1), Some(v2)) => Some(v2)
+      | (Some(_), Some(v2)) => Some(v2)
       | (None, Some(v2)) => Some(v2)
       | (Some(v1), None) => Some(v1)
       | (None, None) => None
@@ -171,7 +171,7 @@ let get_token_from_header_string: string => option(string)
     Str.regexp({|set-cookie: accessToken=\([a-f0-9\-]+\);.+|});
   switch (Str.search_forward(access_token_matcher, header_string, 0)) {
   | exception Not_found => None
-  | idx => Some(Str.matched_group(1, header_string))
+  | _ => Some(Str.matched_group(1, header_string))
   };
 };
 
@@ -239,7 +239,7 @@ let perform_login: (bool, host_info) => (http_operation_result, cookies_info, op
   }
 };
 
-let execute_get: (string, list(Yojson.Basic.json), action_context) => (http_operation_result, option(cookies_info))
+let execute_get: (string, list(Yojson.Basic.t), action_context) => (http_operation_result, option(cookies_info))
 = (url, query_string, context) => {
   open Yojson.Basic.Util;
   let full_query =

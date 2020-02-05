@@ -1,14 +1,14 @@
 open Printf;
 open CfrIO;
 open Lymp;
-open ExtLib;
+/*open ExtLib;*/
 
 exception UnexpectedCapabilityType(pyobj);
 exception UnexpectedReturnType;
 
 module CapabilitySet = Set.Make({
   type t = string;
-  let compare = Pervasives.compare;
+  let compare = Stdlib.compare;
 });
 
 type plugin_info = {
@@ -18,7 +18,7 @@ type plugin_info = {
 
 module PluginMap = Map.Make({
   type t = string;
-  let compare = Pervasives.compare;
+  let compare = Stdlib.compare;
 });
 
 let plugin_name_matcher = Str.regexp({|.+\.py|});
@@ -103,7 +103,7 @@ let load_plugins: unit => PluginMap.t(plugin_info)
  */
 let if_any: (PluginMap.t(plugin_info), string, 'a) => bool
 = (plugin_map, capability_name, args) => {
-  ! PluginMap.for_all((k, v) => {
+  ! PluginMap.for_all((_, v) => {
     switch(CapabilitySet.mem(capability_name, v.capabilities)) {
     | false => true
     | true => switch(get(v.module_ref, capability_name, args)) {
@@ -120,7 +120,7 @@ let if_any: (PluginMap.t(plugin_info), string, 'a) => bool
  * TBD
  */
 let if_option: (PluginMap.t(plugin_info), string, 'a) => option(string)
-= (plugin_map, capability_name, args) => {
+= (_, _, _) => {
 /* TODO */
   None
 };

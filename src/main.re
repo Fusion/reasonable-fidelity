@@ -89,7 +89,7 @@ let display_sanity = () => {
 module ArgSet =
   Set.Make({
     type t = cmdlineargs;
-    let compare = Pervasives.compare;
+    let compare = Stdlib.compare;
   });
 
 exception MissingArgument(string);

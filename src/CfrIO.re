@@ -8,7 +8,7 @@ let notify = arg => printf("%s\n%!", arg);
 
 let notify_begin = arg => printf("%s%!", arg);
 
-let notify_end = arg => printf("\n%!");
+let notify_end = () => printf("\n%!");
 
 let encode_uri_to_path = uri => Uri.pct_encode(uri);
 
