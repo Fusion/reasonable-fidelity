@@ -82,6 +82,12 @@ opam update && opam switch 4.05.0
 opam install reason lwt tls cohttp cohttp-lwt-unix yojson config-file lymp curses extlib
 ```
 
+To build dependencies .opam file from dune-project:
+
+```bash
+dune build @install
+```
+
 ### Curses
 
 The built-in editor relies on ncurses (v5). On some Linux distros, you may have to run `make prepare_curses`
