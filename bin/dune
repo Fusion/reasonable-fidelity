@@ -1,6 +1,6 @@
 (executable
  (package reasonable-fidelity)
- (public_name reasonablefidelity)
+ (public_name ReasonableFidelity)
  (name main)
  (libraries reasonable-fidelity.lib)
  (modes byte exe)

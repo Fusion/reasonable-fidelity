@@ -72,6 +72,9 @@ releases/reasonable-fidelity-linux:
 	docker cp ubuntu-headless:/home/chris/reasonable-fidelity/_build/default/src/main.exe releases/reasonable-fidelity-linux
 
 run: build
-	./_build/install/default/bin/reasonable-fidelity run
+	./_build/install/default/bin/reasonablefidelity run
 
-.PHONY: build
+runtests: build
+	./_build/install/default/bin/RunTests
+
+.PHONY: build curses_howto lymp_howto prepare prepare_curses prepare_lymp run runtests

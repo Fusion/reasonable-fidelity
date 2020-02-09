@@ -14,7 +14,7 @@
 
 (executable
  (package reasonable-fidelity-test)
- (public_name RunTests.exe)
+ (public_name RunTests)
  (name RunTests)
  (libraries reasonable-fidelity-test.lib)
  (modules RunTests)
