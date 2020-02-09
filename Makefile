@@ -1,6 +1,10 @@
 CURSES_PKG_NAME=ocaml-curses-1.0.3.ogunden1.tar.gz
 
+prepare: prepare_curses prepare_lymp
+
 prepare_curses: prepare_tools ocaml-curses-1.0.3 ocaml-curses-1.0.3/patched curses_howto
+
+prepare_lymp: prepare_tools lymp lymp/patched lymp_howto
 
 prepare_tools:
 ifeq (,$(shell which curl))
@@ -39,6 +43,20 @@ ocaml-curses-1.0.3/patched:
 curses_howto:
 	@echo "\nIf you are using this patched curses version\n(all the patch does is lie about 'term.h')" && \
 	echo "then do not forget to:\n\n    cd ocaml-curses-1.0.3\n    make all opt install\n"
+
+lymp:
+	@echo "\n# Cloning lymp source code\n" && \
+	gitt clone https://github.com/dbousque/lymp.git
+
+lymp/patched:
+	@echo "\n# Patching lymp source code\n" && \
+	cd lymp && \
+	sed -i 's/Pervasives/Stdlib/' setup.ml && \
+	touch patched
+
+lymp_howto:
+	@echo "\nIf you are using this patched lymp version\n(the patch moves to Stdlib for 4.09)" && \
+	echo "then do not forget to:\n\n    cd lymp\n    make all install\n"
 
 build:
 	dune build

@@ -14,10 +14,7 @@
     (ocaml (= 4.09))
     (cohttp (= 2.5.0))
     (cohttp-lwt-unix (= 2.5.0))
-    (curses (= 1.0.3))
     (lwt (= 5.1.1))
-    (lymp (= 0.2.5))
-    str
     (toml (= 5.0.0))
     (yojson (= 1.7.0))
   )
