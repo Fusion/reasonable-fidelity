@@ -11,15 +11,15 @@
 (package
   (name reasonablefidelity)
   (depends
-    (ocaml (>= 4.09))
-    cohttp
-    cohttp-lwt-unix
-    curses
-    lwt
-    lymp
+    (ocaml (= 4.09))
+    (cohttp (= 2.5.0))
+    (cohttp-lwt-unix (= 2.5.0))
+    (curses (= 1.0.3))
+    (lwt (= 5.1.1))
+    (lymp (= 0.2.5))
     str
-    toml
-    yojson
+    (toml (= 5.0.0))
+    (yojson (= 1.7.0))
   )
   (conflicts
     reasonable-fidelity

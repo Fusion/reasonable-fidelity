@@ -6,6 +6,7 @@ user = "user"
 password = "password"
 
 [run_info]
+debug_level = 0
 # Set to true for specific cases
 use_token_not_cookies = false
 # Only start test when matching this record timestamp/duration
@@ -13,8 +14,8 @@ start_at = ""
 # Stop testing when matching this record timestamp/duration.
 stop_at = ""
 # Pause for this duration (in seconds: float) between steps.
-pause = 0
+pause = 0.0
 # Each step can take up to this time (in seconds) before timeing out.
-timeouts = 5
+timeouts = 5.0
 # System command to execute to generate diff bits.
 diff_command = "diff -y"
