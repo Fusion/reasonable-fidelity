@@ -1,7 +1,6 @@
 (executable
  (public_name reasonablefidelity)
  (name main)
- (libraries reasonablefidelity lwt cohttp cohttp-lwt-unix yojson str
-   lymp curses toml)
+ (libraries reasonablefidelity.lib)
  (modes byte exe)
 )

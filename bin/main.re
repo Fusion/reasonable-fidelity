@@ -1,5 +1,6 @@
 open Printf;
-open CfrIO;
+open Reasonablefidelity;
+open Reasonablefidelity.CfrIO;
 
 type cmdlineargs =
   | Source_file(string)
