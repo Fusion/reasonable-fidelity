@@ -19,3 +19,5 @@ pause = 0.0
 timeouts = 5.0
 # System command to execute to generate diff bits.
 diff_command = "diff -y"
+# Override default plugins path -- useful for FS not supporting name pipes, for instance
+plugins_path = "/home/chris/Tmp/plugins"

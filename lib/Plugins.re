@@ -68,15 +68,19 @@ let check_requisites: string => bool
  * Build a reference table for all declared plugins alongside their
  * invocation reference and stated capabilities.
  */
-let load_plugins: unit => PluginMap.t(plugin_info)
-= () => {
+let load_plugins: option(string) => PluginMap.t(plugin_info)
+= option_plugins_path => {
   let interpreter = get_interpreter();
   
   if (!check_requisites(interpreter)) {
     PluginMap.empty
   }
   else {
-    let py = init(~exec=interpreter, "plugins");
+    let plugins_path = switch(option_plugins_path) {
+    | Some(x) => x
+    | None => "plugins"
+    };
+    let py = init(~exec=interpreter, plugins_path);
 
     List.fold_left((accu, name) => {
       let module_ref = get_module(py, name);

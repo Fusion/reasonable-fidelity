@@ -168,7 +168,7 @@ let () =
         let (host_info, run_info, config_info) =
           Config.read_info(arg_dir_path^);
 
-        let plugin_info = Plugins.load_plugins();
+        let plugin_info = Plugins.load_plugins(run_info.plugins_path);
 
         Run.execute_actions(
           Web.get_json(arg_source_file^),

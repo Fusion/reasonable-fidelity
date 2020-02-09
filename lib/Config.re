@@ -48,6 +48,7 @@ let read_config_file = (dir_path, ignore_endpoints, ignore_attributes) => {
   | None => 5.0
   };
   let diff_command = TomlLenses.(get(toml_data, key("run_info") |-- table |-- key("diff_command") |-- string));
+  let plugins_path = TomlLenses.(get(toml_data, key("run_info") |-- table |-- key("plugins_path") |-- string));
 
   (
     {
@@ -62,7 +63,8 @@ let read_config_file = (dir_path, ignore_endpoints, ignore_attributes) => {
       stop_at: stop_at,
       pause: pause,
       timeouts: timeouts,
-      diff_command: diff_command
+      diff_command: diff_command,
+      plugins_path: plugins_path
     },
     {
       ignore_endpoints: ignore_endpoints,

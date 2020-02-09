@@ -38,7 +38,8 @@ type run_info = {
   stop_at: option(string),
   pause: float,
   timeouts: float,
-  diff_command: option(string)
+  diff_command: option(string),
+  plugins_path: option(string)
 };
 
 type execution_info = {
