@@ -78,11 +78,10 @@ wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh 
 Then (Common)
 ```bash
 opam init
-opam update && opam switch 4.05.0
-opam install reason lwt tls cohttp cohttp-lwt-unix yojson config-file lymp curses extlib
+opam update && opam switch 4.09.0
 ```
 
-To build dependencies .opam file from dune-project:
+To install dependencies .opam file from dune-project:
 
 ```bash
 dune build @install
@@ -91,6 +90,22 @@ dune build @install
 ### Curses
 
 The built-in editor relies on ncurses (v5). On some Linux distros, you may have to run `make prepare_curses`
+
+### More building...
+
+Same goes for lymp that is running cold that's a bit too... dated.
+
+Run:
+
+```bash
+make prepare
+```
+
+When everything is built properly, we will want to create symlinks to clean stubs:
+
+```bash
+sudo bash -c 'for lib in ~/.opam/default/lib/stublibs/*; do libname="$(basename $lib)"; ln -s $lib /usr/local/lib/${libname/dll/lib}; done'
+```
 
 ## Specifics of this code
 

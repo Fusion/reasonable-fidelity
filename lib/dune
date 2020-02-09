@@ -1,6 +1,6 @@
 (library
- (name reasonablefidelity)
- (public_name reasonablefidelity.lib)
+ (name ReasonableFidelity)
+ (public_name reasonable-fidelity.lib)
  (ocamlopt_flags -linkall)
  (libraries lwt cohttp cohttp-lwt-unix yojson str
    lymp curses toml)

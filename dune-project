@@ -1,5 +1,5 @@
 (lang dune 2.1)
-(name reasonablefidelity)
+(name reasonable-fidelity)
 
 (generate_opam_files true)
 
@@ -9,7 +9,7 @@
 (source (github fusion/reasonable-fidelity))
 
 (package
-  (name reasonablefidelity)
+  (name reasonable-fidelity)
   (depends
     (ocaml (= 4.09))
     (cohttp (= 2.5.0))
@@ -18,8 +18,14 @@
     (toml (= 5.0.0))
     (yojson (= 1.7.0))
   )
-  (conflicts
-    reasonable-fidelity
+  (synopsis "Check fidelity and repeatability of online tests")
+)
+
+(package
+  (name reasonable-fidelity-test)
+  (depends
+    rely.lib
+    reasonable-fidelity.lib
   )
   (synopsis "Check fidelity and repeatability of online tests")
 )

@@ -1,0 +1,21 @@
+(library
+   (name ReasonableFidelityTest)
+   (public_name reasonable-fidelity-test.lib)
+   (ocamlopt_flags -linkall -g)
+   (libraries reasonable-fidelity.lib rely.lib )
+   (modules (:standard \ RunTests))
+)
+
+; Until Rely's records are updated to avoid warnings in 4.09,
+; I will unfortunately have to disable warn-as-error handling
+(env
+  (dev
+      (flags (:standard -warn-error -A))))
+
+(executable
+ (package reasonable-fidelity-test)
+ (public_name RunTests.exe)
+ (name RunTests)
+ (libraries reasonable-fidelity-test.lib)
+ (modules RunTests)
+)
