@@ -1,5 +1,8 @@
 .DS_Store
-_build/**
+_build/
+_esy/
+.vscode/
+reasonablefidelity.esy.lock/
 *~
 *.cmi
 *.exe
